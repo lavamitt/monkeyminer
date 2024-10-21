@@ -46,7 +46,7 @@
     Space to mine the highlighted block
   </div>
 
-  <script>
+  <script type="module">
     const canvas = document.getElementById('game');
     const ctx = canvas.getContext('2d');
     const playerCountElement = document.getElementById('playerCount');
@@ -104,118 +104,7 @@
     }
     createDirtTexture();
 
-    // function drawMinerSprite(ctx, x, y, color, direction, frame) {
-    //   // Body
-    //   ctx.fillStyle = color;
-    //   ctx.fillRect(x + 8, y + 8, 16, 16);
-      
-    //   // Helmet
-    //   ctx.fillStyle = '#333';
-    //   ctx.fillRect(x + 6, y + 4, 20, 8);
-      
-    //   // Lamp on helmet
-    //   ctx.fillStyle = '#FFD700';
-    //   if (direction === 'left') ctx.fillRect(x + 6, y + 6, 4, 4);
-    //   if (direction === 'right') ctx.fillRect(x + 22, y + 6, 4, 4);
-    //   if (direction === 'up') ctx.fillRect(x + 14, y + 4, 4, 4);
-    //   if (direction === 'down') ctx.fillRect(x + 14, y + 8, 4, 4);
-      
-    //   // Legs - animate based on frame
-    //   ctx.fillStyle = '#444';
-    //   if (frame === 0) {
-    //     ctx.fillRect(x + 10, y + 24, 4, 8);
-    //     ctx.fillRect(x + 18, y + 24, 4, 8);
-    //   } else {
-    //     ctx.fillRect(x + 12, y + 24, 4, 8);
-    //     ctx.fillRect(x + 16, y + 24, 4, 8);
-    //   }
-      
-    //   // Pickaxe
-    //   ctx.strokeStyle = '#666';
-    //   ctx.lineWidth = 2;
-    //   ctx.beginPath();
-    //   switch(direction) {
-    //     case 'right':
-    //       ctx.moveTo(x + 24, y + 16);
-    //       ctx.lineTo(x + 30, y + 12);
-    //       ctx.lineTo(x + 28, y + 8);
-    //       break;
-    //     case 'left':
-    //       ctx.moveTo(x + 8, y + 16);
-    //       ctx.lineTo(x + 2, y + 12);
-    //       ctx.lineTo(x + 4, y + 8);
-    //       break;
-    //     case 'down':
-    //       ctx.moveTo(x + 16, y + 24);
-    //       ctx.lineTo(x + 20, y + 30);
-    //       ctx.lineTo(x + 24, y + 28);
-    //       break;
-    //     case 'up':
-    //       ctx.moveTo(x + 16, y + 8);
-    //       ctx.lineTo(x + 20, y + 2);
-    //       ctx.lineTo(x + 24, y + 4);
-    //       break;
-    //   }
-    //   ctx.stroke();
-    // }
-
-    // function drawMoleSprite(ctx, x, y, color, direction, frame) {
-    //     // Body
-    //     ctx.fillStyle = color;
-    //     ctx.beginPath();
-    //     ctx.ellipse(x + 16, y + 20, 12, 10, 0, 0, Math.PI * 2);
-    //     ctx.fill();
-
-    //     // Head
-    //     ctx.beginPath();
-    //     ctx.ellipse(x + 16, y + 12, 10, 8, 0, 0, Math.PI * 2);
-    //     ctx.fill();
-
-    //     // Eyes
-    //     ctx.fillStyle = 'black';
-    //     ctx.beginPath();
-    //     ctx.ellipse(x + 13, y + 10, 2, 2, 0, 0, Math.PI * 2);
-    //     ctx.ellipse(x + 19, y + 10, 2, 2, 0, 0, Math.PI * 2);
-    //     ctx.fill();
-
-    //     // Nose
-    //     ctx.fillStyle = 'pink';
-    //     ctx.beginPath();
-    //     ctx.ellipse(x + 16, y + 14, 3, 2, 0, 0, Math.PI * 2);
-    //     ctx.fill();
-
-    //     // Paws - animate based on frame
-    //     ctx.fillStyle = color;
-    //     if (frame === 0) {
-    //         ctx.fillRect(x + 8, y + 28, 6, 4);
-    //         ctx.fillRect(x + 18, y + 28, 6, 4);
-    //     } else {
-    //         ctx.fillRect(x + 10, y + 26, 6, 4);
-    //         ctx.fillRect(x + 16, y + 26, 6, 4);
-    //     }
-
-    //     // Direction indicator (e.g., a slightly raised paw)
-    //     ctx.beginPath();
-    //     switch(direction) {
-    //         case 'right':
-    //         ctx.ellipse(x + 26, y + 22, 4, 3, 0, 0, Math.PI * 2);
-    //         break;
-    //         case 'left':
-    //         ctx.ellipse(x + 6, y + 22, 4, 3, 0, 0, Math.PI * 2);
-    //         break;
-    //         case 'down':
-    //         ctx.ellipse(x + 16, y + 32, 4, 3, 0, 0, Math.PI * 2);
-    //         break;
-    //         case 'up':
-    //         ctx.ellipse(x + 16, y + 2, 4, 3, 0, 0, Math.PI * 2);
-    //         break;
-    //     }
-    //     ctx.fill();
-    //     }
-
-
-    // Define the pixel art as a 2D array
-const monkeySprite = [
+    const monkeySprite = [
     [0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0],
     [0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0],
     [0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0],
@@ -250,50 +139,92 @@ const monkeySprite = [
     [0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0],
 ];
 
+const monkeySpriteMidwalk = [
+    [0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0],
+    [0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0],
+    [0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0],
+    [0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0],
+    [0,0,0,0,0,0,0,0,0,1,1,1,1,1,1,1,1,1,1,1,1,1,1,0,0,0,0,0,0,0,0,0],
+    [0,0,0,0,0,0,0,0,1,2,2,2,2,2,2,2,2,2,2,2,2,2,2,1,0,0,0,0,0,0,0,0],
+    [0,0,0,0,0,0,0,1,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,1,0,0,0,0,0,0,0],
+    [0,0,0,0,0,0,0,1,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,1,0,0,0,0,0,0,0],
+    [0,0,0,0,0,0,1,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,1,0,0,0,0,0,0],
+    [0,0,0,1,1,1,1,2,2,2,3,3,3,3,3,2,2,2,2,2,2,3,3,3,3,1,1,1,0,0,0,0],
+    [0,0,1,3,3,3,2,2,2,3,3,3,3,3,3,3,2,2,2,2,3,3,3,3,3,1,3,3,1,0,0,0],
+    [0,0,1,3,3,3,2,2,2,3,3,3,1,3,3,3,3,3,3,3,3,3,1,3,3,1,3,3,1,0,0,0],
+    [0,0,1,3,3,3,2,2,2,3,3,3,1,3,3,3,3,3,3,3,3,3,1,3,3,1,3,3,1,0,0,0],
+    [0,0,0,1,1,1,2,2,2,3,3,3,3,3,3,3,1,1,1,3,3,3,3,3,3,1,1,1,0,0,0,0],
+    [0,0,0,0,0,0,1,2,2,3,3,3,3,3,3,3,3,3,3,3,3,3,3,3,1,0,0,0,0,0,0,0],
+    [0,0,0,0,0,0,0,1,2,2,3,3,3,3,3,3,3,3,3,3,3,3,3,1,0,0,0,0,0,0,0,0],
+    [0,0,0,0,0,0,0,0,1,1,1,1,5,5,5,5,5,5,5,5,1,1,1,0,0,0,0,0,0,0,0,0],
+    [0,0,0,0,1,1,0,0,0,1,2,2,2,2,2,2,2,2,2,2,2,1,0,0,0,0,0,0,0,0,0,0],
+    [0,0,0,1,0,0,1,0,1,2,2,2,2,2,2,2,2,2,2,2,2,2,1,0,0,0,0,0,0,0,0,0],
+    [0,0,0,1,0,0,0,0,1,2,5,2,3,3,3,3,3,3,3,3,2,5,1,0,0,0,0,0,0,0,0,0],
+    [0,0,0,1,0,0,0,1,2,2,5,3,3,3,3,3,3,3,3,3,3,5,2,1,0,0,0,0,0,0,0,0],
+    [0,0,0,0,1,0,0,1,2,2,5,3,3,3,3,3,3,3,3,3,3,5,2,1,0,0,0,0,0,0,0,0],
+    [0,0,0,0,0,1,1,1,2,2,5,3,3,3,3,3,3,3,3,3,3,5,2,1,0,0,0,0,0,0,0,0],
+    [0,0,0,0,0,0,0,1,1,1,2,3,3,3,3,3,3,3,3,3,3,1,1,0,0,0,0,0,0,0,0,0],
+    [0,0,0,0,0,0,0,0,0,1,2,2,3,3,3,3,3,3,3,3,2,1,0,0,0,0,0,0,0,0,0,0],
+    [0,0,0,0,0,0,0,0,0,0,1,2,2,2,1,1,1,1,1,2,2,1,0,0,0,0,0,0,0,0,0,0],
+    [0,0,0,0,0,0,0,0,0,0,0,1,1,2,1,0,0,0,1,2,1,0,0,0,0,0,0,0,0,0,0,0],
+    [0,0,0,0,0,0,0,0,0,0,0,0,1,1,1,0,0,0,1,1,0,0,0,0,0,0,0,0,0,0,0,0],
+    [0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0],
+    [0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0],
+    [0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0],
+    [0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0],
+];
 
-    function darkenColor(hex, percent) {
-        // Remove the # if present
-        hex = hex.replace(/^#/, '');
-        
-        // Parse the hex string
-        let r = parseInt(hex.slice(0, 2), 16);
-        let g = parseInt(hex.slice(2, 4), 16);
-        let b = parseInt(hex.slice(4, 6), 16);
+function darkenColor(hex, percent) {
+    // parse the hex string
+    hex = hex.replace(/^#/, '');
+    
+    let r = parseInt(hex.slice(0, 2), 16);
+    let g = parseInt(hex.slice(2, 4), 16);
+    let b = parseInt(hex.slice(4, 6), 16);
 
-        // Darken the color
-        r = Math.floor(r * (1 - percent / 100));
-        g = Math.floor(g * (1 - percent / 100));
-        b = Math.floor(b * (1 - percent / 100));
+    // darken the color
+    r = Math.floor(r * (1 - percent / 100));
+    g = Math.floor(g * (1 - percent / 100));
+    b = Math.floor(b * (1 - percent / 100));
 
-        // Ensure the values are within 0-255 range
-        r = Math.min(255, Math.max(0, r));
-        g = Math.min(255, Math.max(0, g));
-        b = Math.min(255, Math.max(0, b));
+    // ensure the values are within 0-255 range
+    r = Math.min(255, Math.max(0, r));
+    g = Math.min(255, Math.max(0, g));
+    b = Math.min(255, Math.max(0, b));
 
-        // Convert back to hex
-        return `#${((1 << 24) + (r << 16) + (g << 8) + b).toString(16).slice(1)}`;
-    }
+    // convert back to hex
+    return `#${((1 << 24) + (r << 16) + (g << 8) + b).toString(16).slice(1)}`;
+}
 
-    function drawMonkeySprite(ctx, x, y, body_color="#B26B47") {
-        // Define the color palette
-        const monkeyColors = [
-            'transparent',                  // 0: transparent
-            '#000000',                      // 1: black (outline)
-            body_color,                      // 2: body color, default = #B26B47
-            '#E4B86D',                      // 3: ear/belly color
-            'unused',                       // whoops, didnt put 4
-            darkenColor(body_color, 30)     // 5: darker shading (30% darker than body color)
-        ];
 
-        monkeySprite.forEach((row, i) => {
-            row.forEach((pixel, j) => {
-                if (pixel !== 0) {  // 0 is transparent
-                    ctx.fillStyle = monkeyColors[pixel];
+function drawMonkeySprite(ctx, x, y, body_color="#B26B47", direction='right', frame=0) {
+    // Define the color palette
+    const monkeyColors = [
+        'transparent',                  // 0: transparent
+        '#000000',                      // 1: black (outline)
+        body_color,                     // 2: body color, default = #B26B47
+        '#E4B86D',                      // 3: ear/belly color
+        'unused',                       // whoops, didnt put 4 lmao
+        darkenColor(body_color, 30)     // 5: darker shading (30% darker than body color)
+    ];
+
+    const spriteWidth = monkeySprite[0].length;
+    let monkey = [monkeySprite, monkeySpriteMidwalk][frame];
+    monkey.forEach((row, i) => {
+        row.forEach((pixel, j) => {
+            if (pixel !== 0) {  // 0 is transparent
+                ctx.fillStyle = monkeyColors[pixel];
+                if (direction == 'left') {
+                    // If facing left, invert the x-coordinate
+                    ctx.fillRect(x + (spriteWidth - 1 - j), y + i, 1, 1);
+                } else {
+                    // If facing right, draw normally
                     ctx.fillRect(x + j, y + i, 1, 1);
                 }
-            });
+            }
         });
-    }
+    });
+}
 
     const ws = new WebSocket('ws://localhost:3000');
 
@@ -489,7 +420,7 @@ const monkeySprite = [
         
         // Only animate if player is moving
         const frame = player.moving ? animationFrame : 0;
-        drawMonkeySprite(ctx, screenX, screenY, player.color); // player.color, player.direction, frame
+        drawMonkeySprite(ctx, screenX, screenY, player.color, player.direction, frame); // player.color, player.direction, frame
         
         // Draw outline for current player
         if (id === myId) {
