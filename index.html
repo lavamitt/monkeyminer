@@ -48,6 +48,7 @@
 <body>
   <canvas id="game"></canvas>
   <script src="monkey.js" type="module"></script>
+  <script src="banana.js" type="module"></script>
   <div id="info">
     Players Online: <span id="playerCount">0</span><br>
     Position: <span id="position">0, 0</span><br>
@@ -56,7 +57,8 @@
   </div>
   <div id="controls">
     Arrow keys to move<br>
-    Space to mine the highlighted block
+    Space to mine the highlighted block<br>
+    Q to pick up a banana
   </div>
   <div id="top-scores">
     Top Scores:<br>
@@ -65,6 +67,7 @@
 
   <script type="module">
     import { drawMonkeySprite } from './monkey.js';
+    import { drawBananaSprite } from './banana.js';
     const canvas = document.getElementById('game');
     const ctx = canvas.getContext('2d');
     const playerCountElement = document.getElementById('playerCount');
@@ -95,6 +98,7 @@
       EMPTY: 0,
       DIRT: 1,
       ORE: 2,
+      EMPTY_WITH_BANANA: 3,
     });
 
     const dirtPattern = document.createElement('canvas');
@@ -255,6 +259,18 @@
           }));
         }
       }
+
+      if (e.key === "q") {
+        const myPlayer = players.get(myId);
+        if (myPlayer) {
+          const targetBlock = getTargetBlock(myPlayer);
+          ws.send(JSON.stringify({
+            type: 'pickup',
+            blockX: targetBlock.x,
+            blockY: targetBlock.y
+          }));
+        }
+      }
     });
     window.addEventListener('keyup', (e) => keys.delete(e.key));
 
@@ -294,7 +310,7 @@
         const blockX = Math.floor(newX / GRID_SIZE);
         const blockY = Math.floor(newY / GRID_SIZE);
         
-        if (terrain[blockY]?.[blockX] == BLOCK_TYPE.EMPTY) {
+        if (terrain[blockY]?.[blockX] == BLOCK_TYPE.EMPTY || terrain[blockY]?.[blockX] == BLOCK_TYPE.EMPTY_WITH_BANANA) {
           moved = newX !== myPlayer.x || newY !== myPlayer.y;
           myPlayer.x = newX;
           myPlayer.y = newY;
@@ -342,16 +358,20 @@
           if (block !== BLOCK_TYPE.EMPTY) {
             const screenX = x * GRID_SIZE - viewportX;
             const screenY = y * GRID_SIZE - viewportY;
-        
-            // Get pattern based on block type
-           const pattern = patterns[block];
-           if (pattern) {
-             ctx.save();
-             ctx.translate(screenX, screenY);
-             ctx.fillStyle = pattern;
-             ctx.fillRect(0, 0, GRID_SIZE, GRID_SIZE);
-             ctx.restore();
-           }
+
+            if (block === BLOCK_TYPE.EMPTY_WITH_BANANA) {
+              drawBananaSprite(ctx, screenX, screenY);
+            } else {
+              // Get pattern based on block type
+              const pattern = patterns[block];
+              if (pattern) {
+                ctx.save();
+                ctx.translate(screenX, screenY);
+                ctx.fillStyle = pattern;
+                ctx.fillRect(0, 0, GRID_SIZE, GRID_SIZE);
+                ctx.restore();
+              }
+            }
          }
         }
       }

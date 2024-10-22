@@ -23,6 +23,16 @@ const server = http.createServer((req, res) => {
         res.end(data);
       }
     });
+  } else if (req.url === '/banana.js') {
+    fs.readFile('./sprites/banana.js', (err, data) => {
+      if (err) {
+        res.writeHead(404);
+        res.end('File not found');
+      } else {
+        res.writeHead(200, { 'Content-Type': 'application/javascript' });
+        res.end(data);
+      }
+    });
   }
 });
 
@@ -37,6 +47,7 @@ const BLOCK_TYPE = Object.freeze({
   EMPTY: 0,
   DIRT: 1,
   ORE: 2,
+  EMPTY_WITH_BANANA: 3,
 });
 
 const terrain = new Array(WORLD_SIZE).fill(null)
@@ -79,7 +90,8 @@ wss.on('connection', (ws) => {
     y: (startY + START_AREA_SIZE/2) * GRID_SIZE,
     color: generateColor(),
     direction: 'right', // default direction
-    score: 0
+    score: 0,
+    inventory: []
   });
 
   // Send client their ID, initial state, and terrain
@@ -135,11 +147,17 @@ wss.on('connection', (ws) => {
       
       if (blockX >= 0 && blockX < WORLD_SIZE && 
           blockY >= 0 && blockY < WORLD_SIZE &&
-          terrain[blockY][blockX] !== BLOCK_TYPE.EMPTY) {
+          terrain[blockY][blockX] !== BLOCK_TYPE.EMPTY &&
+          terrain[blockY][blockX] !== BLOCK_TYPE.EMPTY_WITH_BANANA) {
         if (terrain[blockY][blockX] == BLOCK_TYPE.ORE) {
           player.score += 1;
         }
-        terrain[blockY][blockX] = BLOCK_TYPE.EMPTY;
+
+        if (Math.random() < 0.05) {
+          terrain[blockY][blockX] = BLOCK_TYPE.EMPTY_WITH_BANANA;
+        } else {
+          terrain[blockY][blockX] = BLOCK_TYPE.EMPTY;
+        }
         
         wss.clients.forEach(client => {
           if (client.readyState === WebSocket.OPEN) {
@@ -147,7 +165,7 @@ wss.on('connection', (ws) => {
               type: 'terrainUpdate',
               x: blockX,
               y: blockY,
-              value: BLOCK_TYPE.EMPTY
+              value: terrain[blockY][blockX]
             }));
           }
         });
@@ -165,6 +183,24 @@ wss.on('connection', (ws) => {
             }));
           }
         })
+      }
+    } else if (data.type == 'pickup') {
+      const player = players.get(clientId);
+      const blockX = data.blockX;
+      const blockY = data.blockY;
+      if (terrain[blockY][blockX] === BLOCK_TYPE.EMPTY_WITH_BANANA && player.inventory.length == 0) {
+        player.inventory = ["banana"];
+        terrain[blockY][blockX] = BLOCK_TYPE.EMPTY;
+        wss.clients.forEach(client => {
+          if (client.readyState === WebSocket.OPEN) {
+            client.send(JSON.stringify({
+              type: 'terrainUpdate',
+              x: blockX,
+              y: blockY,
+              value: terrain[blockY][blockX]
+            }));
+          }
+        });
       }
     }
   });
