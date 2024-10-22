@@ -158,6 +158,10 @@ wss.on('connection', (ws) => {
               type: 'scoreUpdate',
               id: clientId,
               value: player.score,
+              players: Array.from(players.entries()).map(([id, data]) => ({
+                id,
+                score: data.score
+              })),
             }));
           }
         })

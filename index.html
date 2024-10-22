@@ -33,6 +33,16 @@
       padding: 10px;
       border-radius: 5px;
     }
+    #top-scores {
+      position: fixed;
+      top: 10px;
+      right: 10px;
+      color: white;
+      font-family: monospace;
+      background: rgba(0, 0, 0, 0.5);
+      padding: 10px;
+      border-radius: 5px;
+    }
   </style>
 </head>
 <body>
@@ -41,11 +51,16 @@
   <div id="info">
     Players Online: <span id="playerCount">0</span><br>
     Position: <span id="position">0, 0</span><br>
+    ID: <span id='monkeyId'>null</span><br>
     Score: <span id="score">0</span>
   </div>
   <div id="controls">
     Arrow keys to move<br>
     Space to mine the highlighted block
+  </div>
+  <div id="top-scores">
+    Top Scores:<br>
+    <span id="scores"></span>
   </div>
 
   <script type="module">
@@ -55,6 +70,8 @@
     const playerCountElement = document.getElementById('playerCount');
     const positionElement = document.getElementById('position');
     const scoreElement = document.getElementById('score');
+    const topScoresElement = document.getElementById('scores');
+    const monkeyIdElement = document.getElementById('monkeyId');
 
     function resizeCanvas() {
       canvas.width = window.innerWidth;
@@ -165,6 +182,10 @@
             viewportX = myPlayer.x - canvas.width / 2;
             viewportY = myPlayer.y - canvas.height / 2;
           }
+
+          monkeyIdElement.textContent = "monkey_" + myPlayer.id;
+          data.players.sort((a, b) => b.score - a.score);
+          topScoresElement.innerHTML = data.players.map((player) => "monkey_" + player.id + ": " + player.score).join('<br>');
           break;
 
         case 'playerJoin':
@@ -190,6 +211,8 @@
           if (data.id === myId) {
             scoreElement.textContent = data.value;
           }
+          data.players.sort((a, b) => b.score - a.score);
+          topScoresElement.innerHTML = data.players.map((player) => "monkey_" + player.id + ": " + player.score).join('<br>');
           break;
         case 'playerLeave':
           players.delete(data.id);
@@ -244,7 +267,7 @@
 
       const myPlayer = players.get(myId);
       if (myPlayer) {
-        const speed = 6;
+        const speed = 4;
         let newX = myPlayer.x;
         let newY = myPlayer.y;
         let moved = false;
