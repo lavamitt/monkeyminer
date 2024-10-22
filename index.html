@@ -40,7 +40,8 @@
   <script src="monkey.js" type="module"></script>
   <div id="info">
     Players Online: <span id="playerCount">0</span><br>
-    Position: <span id="position">0, 0</span>
+    Position: <span id="position">0, 0</span><br>
+    Score: <span id="score">0</span>
   </div>
   <div id="controls">
     Arrow keys to move<br>
@@ -53,6 +54,7 @@
     const ctx = canvas.getContext('2d');
     const playerCountElement = document.getElementById('playerCount');
     const positionElement = document.getElementById('position');
+    const scoreElement = document.getElementById('score');
 
     function resizeCanvas() {
       canvas.width = window.innerWidth;
@@ -184,6 +186,11 @@
           }
           break;
 
+        case 'scoreUpdate':
+          if (data.id === myId) {
+            scoreElement.textContent = data.value;
+          }
+          break;
         case 'playerLeave':
           players.delete(data.id);
           break;
@@ -237,7 +244,7 @@
 
       const myPlayer = players.get(myId);
       if (myPlayer) {
-        const speed = 4;
+        const speed = 6;
         let newX = myPlayer.x;
         let newY = myPlayer.y;
         let moved = false;

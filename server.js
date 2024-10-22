@@ -78,7 +78,8 @@ wss.on('connection', (ws) => {
     x: (startX + START_AREA_SIZE/2) * GRID_SIZE,
     y: (startY + START_AREA_SIZE/2) * GRID_SIZE,
     color: generateColor(),
-    direction: 'right' // default direction
+    direction: 'right', // default direction
+    score: 0
   });
 
   // Send client their ID, initial state, and terrain
@@ -127,12 +128,17 @@ wss.on('connection', (ws) => {
         });
       }
     } else if (data.type === 'mine') {
+      const player = players.get(clientId);
+
       const blockX = data.blockX;
       const blockY = data.blockY;
       
       if (blockX >= 0 && blockX < WORLD_SIZE && 
           blockY >= 0 && blockY < WORLD_SIZE &&
-          terrain[blockY][blockX]) {
+          terrain[blockY][blockX] !== BLOCK_TYPE.EMPTY) {
+        if (terrain[blockY][blockX] == BLOCK_TYPE.ORE) {
+          player.score += 1;
+        }
         terrain[blockY][blockX] = BLOCK_TYPE.EMPTY;
         
         wss.clients.forEach(client => {
@@ -145,6 +151,16 @@ wss.on('connection', (ws) => {
             }));
           }
         });
+
+        wss.clients.forEach(client => {
+          if (client.readyState === WebSocket.OPEN) {
+            client.send(JSON.stringify({
+              type: 'scoreUpdate',
+              id: clientId,
+              value: player.score,
+            }));
+          }
+        })
       }
     }
   });
