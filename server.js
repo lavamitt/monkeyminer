@@ -13,6 +13,16 @@ const server = http.createServer((req, res) => {
         res.end(data);
       }
     });
+  } else if (req.url === '/monkey.js') {
+    fs.readFile('./sprites/monkey.js', (err, data) => {
+      if (err) {
+        res.writeHead(404);
+        res.end('File not found');
+      } else {
+        res.writeHead(200, { 'Content-Type': 'application/javascript' });
+        res.end(data);
+      }
+    });
   }
 });
 
@@ -23,15 +33,33 @@ const GRID_SIZE = 32; // Size of each terrain block
 const WORLD_SIZE = 1000; // World size in blocks
 const START_AREA_SIZE = 10; // Size of starting area in blocks
 
+const BLOCK_TYPE = Object.freeze({
+  EMPTY: 0,
+  DIRT: 1,
+  ORE: 2,
+});
+
 const terrain = new Array(WORLD_SIZE).fill(null)
-  .map(() => new Array(WORLD_SIZE).fill(true));
+  .map(() => new Array(WORLD_SIZE).fill(BLOCK_TYPE.DIRT));
 
 // Create starting area
 const startX = Math.floor(WORLD_SIZE / 2 - START_AREA_SIZE / 2);
 const startY = Math.floor(WORLD_SIZE / 2 - START_AREA_SIZE / 2);
 for (let y = startY; y < startY + START_AREA_SIZE; y++) {
   for (let x = startX; x < startX + START_AREA_SIZE; x++) {
-    terrain[y][x] = false;
+    terrain[y][x] = BLOCK_TYPE.EMPTY;
+  }
+}
+
+
+// Add random ore
+for (let y = 0; y < WORLD_SIZE; y++) {
+  for (let x = 0; x < WORLD_SIZE; x++) {
+    if (terrain[y][x] !== BLOCK_TYPE.EMPTY) {
+      if (Math.random() < 0.1) {
+        terrain[y][x] = BLOCK_TYPE.ORE;
+      }
+    }
   }
 }
 
@@ -105,7 +133,7 @@ wss.on('connection', (ws) => {
       if (blockX >= 0 && blockX < WORLD_SIZE && 
           blockY >= 0 && blockY < WORLD_SIZE &&
           terrain[blockY][blockX]) {
-        terrain[blockY][blockX] = false;
+        terrain[blockY][blockX] = BLOCK_TYPE.EMPTY;
         
         wss.clients.forEach(client => {
           if (client.readyState === WebSocket.OPEN) {
@@ -113,7 +141,7 @@ wss.on('connection', (ws) => {
               type: 'terrainUpdate',
               x: blockX,
               y: blockY,
-              value: false
+              value: BLOCK_TYPE.EMPTY
             }));
           }
         });
