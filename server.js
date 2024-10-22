@@ -201,6 +201,12 @@ wss.on('connection', (ws) => {
             }));
           }
         });
+
+        ws.send(JSON.stringify({
+          type: 'inventoryUpdate',
+          id: clientId,
+          inventory: player.inventory
+        }));
       }
     }
   });

@@ -8,7 +8,7 @@
       overflow: hidden;
       background: #1a1a1a;
     }
-    canvas {
+    #game {
       position: absolute;
       top: 0;
       left: 0;
@@ -33,7 +33,7 @@
       padding: 10px;
       border-radius: 5px;
     }
-    #top-scores {
+    #topScores {
       position: fixed;
       top: 10px;
       right: 10px;
@@ -42,6 +42,14 @@
       background: rgba(0, 0, 0, 0.5);
       padding: 10px;
       border-radius: 5px;
+    }
+    #inventorySlot {
+        position: fixed;
+        bottom: 20px;
+        left: 50%;
+        transform: translateX(-50%);
+        border: 2px solid #666;
+        background: rgba(0, 0, 0, 0.4);
     }
   </style>
 </head>
@@ -58,12 +66,13 @@
   <div id="controls">
     Arrow keys to move<br>
     Space to mine the highlighted block<br>
-    Q to pick up a banana
+    Q to pick up a highlighted banana
   </div>
-  <div id="top-scores">
+  <div id="topScores">
     Top Scores:<br>
     <span id="scores"></span>
   </div>
+  <canvas id="inventorySlot" width="48" height="48"></canvas>
 
   <script type="module">
     import { drawMonkeySprite } from './monkey.js';
@@ -218,8 +227,13 @@
           data.players.sort((a, b) => b.score - a.score);
           topScoresElement.innerHTML = data.players.map((player) => "monkey_" + player.id + ": " + player.score).join('<br>');
           break;
+
         case 'playerLeave':
           players.delete(data.id);
+          break;
+        
+        case 'inventoryUpdate':
+          players.get(data.id).inventory = data.inventory;
           break;
 
         case 'terrainUpdate':
@@ -406,6 +420,18 @@
           ctx.strokeRect(screenX, screenY, GRID_SIZE, GRID_SIZE);
         }
       });
+
+      const inventoryCanvas = document.getElementById('inventorySlot');
+      const inventoryCtx = inventoryCanvas.getContext('2d');
+
+      inventoryCtx.fillStyle = 'rgba(68, 68, 68, 0.4)';
+      inventoryCtx.fillRect(0, 0, 48, 48);
+      inventoryCtx.strokeStyle = 'rgba(255, 255, 255, 0.3)';
+      inventoryCtx.strokeRect(0, 0, 48, 48);
+
+      if (myPlayer && myPlayer.inventory.length > 0) {
+          drawBananaSprite(inventoryCtx, 8, 8);
+      }
 
       playerCountElement.textContent = players.size;
 
