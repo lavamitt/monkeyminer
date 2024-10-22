@@ -6,7 +6,9 @@
   "scripts": {
     "test": "echo \"Error: no test specified\" && exit 1",
     "start": "node server.js",
-    "lint": "eslint '*.js'"
+    "lint": "html-validate index.html",
+    "eslint": "eslint . *.js",
+    "eslint:fix": "eslint . *.js --fix"
   },
   "keywords": [],
   "author": "",
@@ -17,6 +19,7 @@
   "devDependencies": {
     "@eslint/js": "^9.13.0",
     "eslint": "^9.13.0",
-    "globals": "^15.11.0"
+    "globals": "^15.11.0",
+    "html-validate": "^8.24.2"
   }
 }
