@@ -191,50 +191,99 @@
         [BLOCK_TYPE.ORE]: createOrePattern(),
     };
 
-    function createZonePattern(completed) {
-      const patternCanvas = document.createElement('canvas');
-      patternCanvas.width = GRID_SIZE;
-      patternCanvas.height = GRID_SIZE;
-      const patternCtx = patternCanvas.getContext('2d');
+    const ANIMATION_FRAMES = 8;  // Number of frames in the animation
+    const zonePatternCache = {
+        completed: new Array(ANIMATION_FRAMES),
+        incomplete: new Array(ANIMATION_FRAMES)
+    };
 
-      // Base color based on completion status
-      const baseColor = completed ? '#2eb82e' : '#cc3300'; // Green or red
-
-      // Fill background
-      patternCtx.fillStyle = baseColor;
-      patternCtx.fillRect(0, 0, GRID_SIZE, GRID_SIZE);
-
-      // Add mystical pattern elements
-      patternCtx.strokeStyle = completed ? '#1a661a' : '#801a00'; // Darker shade
-      patternCtx.lineWidth = 1;
-      
-      // Draw some curved lines
-      patternCtx.beginPath();
-      patternCtx.moveTo(0, GRID_SIZE/2);
-      patternCtx.quadraticCurveTo(GRID_SIZE/2, 0, GRID_SIZE, GRID_SIZE/2);
-      patternCtx.stroke();
-
-      patternCtx.beginPath();
-      patternCtx.moveTo(GRID_SIZE/2, 0);
-      patternCtx.quadraticCurveTo(GRID_SIZE, GRID_SIZE/2, GRID_SIZE/2, GRID_SIZE);
-      patternCtx.stroke();
-
-      // Add some dots
-      const dotColor = completed ? '#4dff4d' : '#ff6666'; // Lighter shade
-      patternCtx.fillStyle = dotColor;
-      for (let i = 0; i < 4; i++) {
-          const x = Math.random() * GRID_SIZE;
-          const y = Math.random() * GRID_SIZE;
-          patternCtx.beginPath();
-          patternCtx.arc(x, y, 2, 0, Math.PI * 2);
-          patternCtx.fill();
+    function createZonePatterns() {
+      // Create patterns for each animation frame
+      for (let frame = 0; frame < ANIMATION_FRAMES; frame++) {
+        // Create completed pattern
+        const completedCanvas = document.createElement('canvas');
+        completedCanvas.width = GRID_SIZE;
+        completedCanvas.height = GRID_SIZE;
+        const completedCtx = completedCanvas.getContext('2d');
+        
+        // Base color and lines (static part)
+        completedCtx.fillStyle = '#2eb82e';
+        completedCtx.fillRect(0, 0, GRID_SIZE, GRID_SIZE);
+        completedCtx.strokeStyle = '#1a661a';
+        completedCtx.lineWidth = 1;
+        
+        completedCtx.beginPath();
+        completedCtx.moveTo(0, GRID_SIZE/2);
+        completedCtx.quadraticCurveTo(GRID_SIZE/2, 0, GRID_SIZE, GRID_SIZE/2);
+        completedCtx.stroke();
+        
+        completedCtx.beginPath();
+        completedCtx.moveTo(GRID_SIZE/2, 0);
+        completedCtx.quadraticCurveTo(GRID_SIZE, GRID_SIZE/2, GRID_SIZE/2, GRID_SIZE);
+        completedCtx.stroke();
+        
+        // Animated sparkles
+        completedCtx.fillStyle = '#4dff4d';
+        // Use frame number to offset sparkle positions
+        for (let i = 0; i < 4; i++) {
+            const angle = (frame / ANIMATION_FRAMES * Math.PI * 2) + (i * Math.PI / 2);
+            const radius = GRID_SIZE / 4;
+            const x = GRID_SIZE/2 + Math.cos(angle) * radius;
+            const y = GRID_SIZE/2 + Math.sin(angle) * radius;
+            completedCtx.beginPath();
+            completedCtx.arc(x, y, 2, 0, Math.PI * 2);
+            completedCtx.fill();
+        }
+        
+        // Create incomplete pattern
+        const incompleteCanvas = document.createElement('canvas');
+        incompleteCanvas.width = GRID_SIZE;
+        incompleteCanvas.height = GRID_SIZE;
+        const incompleteCtx = incompleteCanvas.getContext('2d');
+        
+        // Base color and lines (static part)
+        incompleteCtx.fillStyle = '#cc3300';
+        incompleteCtx.fillRect(0, 0, GRID_SIZE, GRID_SIZE);
+        incompleteCtx.strokeStyle = '#801a00';
+        incompleteCtx.lineWidth = 1;
+        
+        incompleteCtx.beginPath();
+        incompleteCtx.moveTo(0, GRID_SIZE/2);
+        incompleteCtx.quadraticCurveTo(GRID_SIZE/2, 0, GRID_SIZE, GRID_SIZE/2);
+        incompleteCtx.stroke();
+        
+        incompleteCtx.beginPath();
+        incompleteCtx.moveTo(GRID_SIZE/2, 0);
+        incompleteCtx.quadraticCurveTo(GRID_SIZE, GRID_SIZE/2, GRID_SIZE/2, GRID_SIZE);
+        incompleteCtx.stroke();
+        
+        // Animated sparkles
+        incompleteCtx.fillStyle = '#ff6666';
+        for (let i = 0; i < 4; i++) {
+            const angle = (frame / ANIMATION_FRAMES * Math.PI * 2) + (i * Math.PI / 2);
+            const radius = GRID_SIZE / 4;
+            const x = GRID_SIZE/2 + Math.cos(angle) * radius;
+            const y = GRID_SIZE/2 + Math.sin(angle) * radius;
+            incompleteCtx.beginPath();
+            incompleteCtx.arc(x, y, 2, 0, Math.PI * 2);
+            incompleteCtx.fill();
+        }
+        
+        // Cache the patterns
+        zonePatternCache.completed[frame] = ctx.createPattern(completedCanvas, 'repeat');
+        zonePatternCache.incomplete[frame] = ctx.createPattern(incompleteCanvas, 'repeat');
       }
+    }
 
-      return patternCtx.createPattern(patternCanvas, 'repeat');
-  }
+    let lastZoneAnimationUpdate = 0;
+    let currentZoneFrame = 0;
+    const ZONE_ANIMATION_SPEED = 100;
+
+    createZonePatterns();
 
     // SET UP WEBSOCKET
-    const ws = new WebSocket('ws://localhost:3000');
+    // 13.59.50.220
+    const ws = new WebSocket('ws://13.59.50.220:3000');
 
     ws.onmessage = (event) => {
       const data = JSON.parse(event.data);
@@ -272,7 +321,7 @@
           break;
 
         case 'playerMove':
-          if (players.has(data.id)) {
+          if (players.has(data.id) && data.id !== myId) {
             const player = players.get(data.id);
             player.x = data.x;
             player.y = data.y;
@@ -350,15 +399,19 @@
     window.addEventListener('keyup', (e) => keys.delete(e.key));
 
     function gameLoop(timestamp) {
-    // Update animation frame
       if (timestamp - lastAnimationUpdate > ANIMATION_SPEED) {
         animationFrame = (animationFrame + 1) % 2;
         lastAnimationUpdate = timestamp;
       }
 
+      if (timestamp - lastZoneAnimationUpdate > ZONE_ANIMATION_SPEED) {
+        currentZoneFrame = (currentZoneFrame + 1) % ANIMATION_FRAMES;
+        lastZoneAnimationUpdate = timestamp;
+      }
+
       const myPlayer = players.get(myId);
       if (myPlayer) {
-        const speed = 4;
+        const speed = 6;
         let newX = myPlayer.x;
         let newY = myPlayer.y;
         let moved = false;
@@ -407,6 +460,8 @@
           viewportY = myPlayer.y - canvas.height / 2;
         }
 
+        myPlayer.moving = moved;
+
         positionElement.textContent = `${Math.floor(myPlayer.x / GRID_SIZE)}, ${Math.floor(myPlayer.y / GRID_SIZE)}`;
       }
 
@@ -434,7 +489,9 @@
                     if (x >= zx && x < zx + zone.width && 
                         y >= zy && y < zy + zone.height) {
                         // Draw zone pattern
-                        ctx.fillStyle = createZonePattern(zone.completed);
+                        ctx.fillStyle = zone.completed ? 
+                          zonePatternCache.completed[currentZoneFrame] : 
+                          zonePatternCache.incomplete[currentZoneFrame];
                         ctx.fillRect(screenX, screenY, GRID_SIZE, GRID_SIZE);
                         
                         // If this is the center block of the zone, draw the requirement text

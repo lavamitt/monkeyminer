@@ -228,9 +228,6 @@ wss.on('connection', (ws) => {
         const playerBlockY = Math.floor(player.y / GRID_SIZE);
         const zoneKey = isInZone(playerBlockX, playerBlockY);
         if (zoneKey && player.inventory.length > 0) {
-            console.log("MONKEY IN ZONE")
-            console.log(zoneKey)
-            console.log(player.inventory.length)
             const zone = zones.get(zoneKey);
             if (zone && !zone.completed) {
                 zone.currentMonkeys.add(clientId);
