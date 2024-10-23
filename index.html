@@ -99,6 +99,7 @@
     let viewportX = 0;
     let viewportY = 0;
     let terrain = [];
+    let zones = new Map();
     let animationFrame = 0;
     let lastAnimationUpdate = 0;
     const ANIMATION_SPEED = 150;
@@ -108,16 +109,16 @@
       DIRT: 1,
       ORE: 2,
       EMPTY_WITH_BANANA: 3,
-      INCOMPLETE_ZONE: 4,
-      COMPLETE_ZONE: 5,
+      ZONE: 5
     });
+    
 
-    const dirtPattern = document.createElement('canvas');
-    dirtPattern.width = GRID_SIZE;
-    dirtPattern.height = GRID_SIZE;
-    const dirtPatternCtx = dirtPattern.getContext('2d');
+    function createDirtPattern() {
+      const dirtPattern = document.createElement('canvas');
+      dirtPattern.width = GRID_SIZE;
+      dirtPattern.height = GRID_SIZE;
+      const dirtPatternCtx = dirtPattern.getContext('2d');
 
-    function createDirtTexture() {
       // Base brown color
       dirtPatternCtx.fillStyle = '#8B6143';
       dirtPatternCtx.fillRect(0, 0, GRID_SIZE, GRID_SIZE);
@@ -143,15 +144,16 @@
       // Add a subtle grid line
       dirtPatternCtx.strokeStyle = 'rgba(0, 0, 0, 0.1)';
       dirtPatternCtx.strokeRect(0, 0, GRID_SIZE, GRID_SIZE);
+
+      return ctx.createPattern(dirtPattern, 'repeat')
     }
-    createDirtTexture();
 
-    const orePattern = document.createElement('canvas');
-    orePattern.width = GRID_SIZE;
-    orePattern.height = GRID_SIZE;
-    const orePatternCtx = orePattern.getContext('2d');
+    function createOrePattern() {
+      const orePattern = document.createElement('canvas');
+      orePattern.width = GRID_SIZE;
+      orePattern.height = GRID_SIZE;
+      const orePatternCtx = orePattern.getContext('2d');
 
-    function createOreTexture() {
       // Base grey color
       orePatternCtx.fillStyle = '#9AA7AD';
       orePatternCtx.fillRect(0, 0, GRID_SIZE, GRID_SIZE);
@@ -177,8 +179,51 @@
       // Add a subtle grid line
       orePatternCtx.strokeStyle = 'rgba(0, 0, 0, 0.1)';
       orePatternCtx.strokeRect(0, 0, GRID_SIZE, GRID_SIZE);
+
+      return ctx.createPattern(orePattern, 'repeat');
     }
-    createOreTexture();
+
+    function createZonePattern(completed) {
+      const patternCanvas = document.createElement('canvas');
+      patternCanvas.width = GRID_SIZE;
+      patternCanvas.height = GRID_SIZE;
+      const patternCtx = patternCanvas.getContext('2d');
+
+      // Base color based on completion status
+      const baseColor = completed ? '#2eb82e' : '#cc3300'; // Green or red
+
+      // Fill background
+      patternCtx.fillStyle = baseColor;
+      patternCtx.fillRect(0, 0, GRID_SIZE, GRID_SIZE);
+
+      // Add mystical pattern elements
+      patternCtx.strokeStyle = completed ? '#1a661a' : '#801a00'; // Darker shade
+      patternCtx.lineWidth = 1;
+      
+      // Draw some curved lines
+      patternCtx.beginPath();
+      patternCtx.moveTo(0, GRID_SIZE/2);
+      patternCtx.quadraticCurveTo(GRID_SIZE/2, 0, GRID_SIZE, GRID_SIZE/2);
+      patternCtx.stroke();
+
+      patternCtx.beginPath();
+      patternCtx.moveTo(GRID_SIZE/2, 0);
+      patternCtx.quadraticCurveTo(GRID_SIZE, GRID_SIZE/2, GRID_SIZE/2, GRID_SIZE);
+      patternCtx.stroke();
+
+      // Add some dots
+      const dotColor = completed ? '#4dff4d' : '#ff6666'; // Lighter shade
+      patternCtx.fillStyle = dotColor;
+      for (let i = 0; i < 4; i++) {
+          const x = Math.random() * GRID_SIZE;
+          const y = Math.random() * GRID_SIZE;
+          patternCtx.beginPath();
+          patternCtx.arc(x, y, 2, 0, Math.PI * 2);
+          patternCtx.fill();
+      }
+
+      return patternCtx.createPattern(patternCanvas, 'repeat');
+  }
 
     const ws = new WebSocket('ws://localhost:3000');
 
@@ -189,6 +234,7 @@
         case 'init':
           myId = data.id;
           terrain = data.terrain;
+          zones = data.zones;
           data.players.forEach(player => {
             players.set(player.id, player);
           });
@@ -366,18 +412,52 @@
 
       // Create patterns for each block type
       const patterns = {
-        [BLOCK_TYPE.DIRT]: ctx.createPattern(dirtPattern, 'repeat'),
-        [BLOCK_TYPE.ORE]: ctx.createPattern(orePattern, 'repeat')
-        
+        [BLOCK_TYPE.DIRT]: createDirtPattern(),
+        [BLOCK_TYPE.ORE]: createOrePattern(),
       };
 
       for (let y = startBlockY; y < endBlockY; y++) {
         for (let x = startBlockX; x < endBlockX; x++) {
           let block = terrain[y]?.[x];
-
           if (block !== BLOCK_TYPE.EMPTY) {
             const screenX = x * GRID_SIZE - viewportX;
             const screenY = y * GRID_SIZE - viewportY;
+
+            if (terrain[y][x] === BLOCK_TYPE.ZONE) {
+                // Find which zone this block belongs to
+                for (let [coords, zone] of zones) {
+                    const [zx, zy] = coords.split(',').map(Number);
+                    if (x >= zx && x < zx + zone.width && 
+                        y >= zy && y < zy + zone.height) {
+                        // Draw zone pattern
+                        ctx.fillStyle = createZonePattern(zone.completed);
+                        ctx.fillRect(screenX, screenY, GRID_SIZE, GRID_SIZE);
+                        
+                        // If this is the center block of the zone, draw the requirement text
+                        const centerX = Math.floor(zx + zone.width/2) === x;
+                        const centerY = Math.floor(zy + zone.height/2) === y;
+                        if (centerX && centerY) {
+                            // Draw requirement text
+                            ctx.save();
+                            ctx.fillStyle = 'white';
+                            ctx.strokeStyle = 'black';
+                            ctx.lineWidth = 3;
+                            ctx.font = 'bold 20px Arial';
+                            ctx.textAlign = 'center';
+                            ctx.textBaseline = 'middle';
+                            const text = `${zone.currentMonkeys.size}/${zone.requiredMonkeys}`;
+                            const textX = screenX + GRID_SIZE/2;
+                            const textY = screenY + GRID_SIZE/2;
+                            // Draw text stroke
+                            ctx.strokeText(text, textX, textY);
+                            // Draw text fill
+                            ctx.fillText(text, textX, textY);
+                            ctx.restore();
+                        }
+                        break;
+                    }
+                }
+            }
 
             if (block === BLOCK_TYPE.EMPTY_WITH_BANANA) {
               drawBananaSprite(ctx, screenX, screenY);

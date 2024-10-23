@@ -50,7 +50,7 @@ function drawBananaSprite(ctx, x, y) {
     const spriteWidth = bananaSprite[0].length;
     bananaSprite.forEach((row, i) => {
         row.forEach((pixel, j) => {
-            if (pixel !== 0) {  // 0 is transparent
+            if (pixel !== 0) {
                 ctx.fillStyle = bananaColors[pixel];
                 ctx.fillRect(x + j, y + i, 1, 1);
             }

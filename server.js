@@ -48,8 +48,7 @@ const BLOCK_TYPE = Object.freeze({
   DIRT: 1,
   ORE: 2,
   EMPTY_WITH_BANANA: 3,
-  INCOMPLETE_ZONE: 4,
-  COMPLETE_ZONE: 5
+  ZONE: 4
 });
 
 const terrain = new Array(WORLD_SIZE).fill(null)
@@ -127,7 +126,7 @@ while (zones_created < NUM_ZONES) {
     if (is_valid_location) {
       for (let dy = 0; dy < ZONE_HEIGHT; dy++) {
           for (let dx = 0; dx < ZONE_WIDTH; dx++) {
-              terrain[y + dy][x + dx] = BLOCK_TYPE.INCOMPLETE_ZONE;
+              terrain[y + dy][x + dx] = BLOCK_TYPE.ZONE;
           }
       }
       
@@ -184,6 +183,7 @@ wss.on('connection', (ws) => {
       ...data
     })),
     terrain: terrain,
+    zones: zones,
     gridSize: GRID_SIZE
   }));
 
@@ -266,7 +266,7 @@ wss.on('connection', (ws) => {
                   //         }));
                   //     }
                   // });
-                  
+
                   for (let dy = 0; dy < zone.height; dy++) {
                     for (let dx = 0; dx < zone.width; dx++) {
                         terrain[y + dy][x + dx] = BLOCK_TYPE.COMPLETE_ZONE;
