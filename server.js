@@ -166,6 +166,7 @@ wss.on('connection', (ws) => {
   
   // Add direction to player state
   players.set(clientId, {
+    id: clientId,
     x: (startX + START_AREA_SIZE/2) * GRID_SIZE,
     y: (startY + START_AREA_SIZE/2) * GRID_SIZE,
     color: generateColor(),
@@ -178,10 +179,7 @@ wss.on('connection', (ws) => {
   ws.send(JSON.stringify({
     type: 'init',
     id: clientId,
-    players: Array.from(players.entries()).map(([id, data]) => ({
-      id,
-      ...data
-    })),
+    players: Array.from(players.entries()).map(([_, data]) => data),
     terrain: terrain,
     zones: Array.from(zones.entries()).map(([key, zone]) => ({
       key,
@@ -197,7 +195,7 @@ wss.on('connection', (ws) => {
       client.send(JSON.stringify({
         type: 'playerJoin',
         id: clientId,
-        ...players.get(clientId)
+        player: players.get(clientId),
       }));
     }
   });
@@ -234,21 +232,25 @@ wss.on('connection', (ws) => {
                 if (zone.currentMonkeys.size >= zone.requiredMonkeys) {
                   zone.completed = true;
 
-                  console.log("COMPLETED!")
+                  console.log("COMPLETED!");
+                  console.log(zone.currentMonkeys);
                   
                   zone.currentMonkeys.forEach(playerId => {
+                      console.log("SENDING UPDATES FOR SCORES");
                       const zonePlayer = players.get(playerId);
+                      console.log(zonePlayer);
                       if (zonePlayer) {
-                          zonePlayer.score += 10 * zone.currentMonkeys.size
+                          zonePlayer.score += 10 * zone.currentMonkeys.size;
                           zonePlayer.inventory = [];  // Remove banana
                       }
+                      console.log(zonePlayer);
 
                       wss.clients.forEach(client => {
                         if (client.readyState === WebSocket.OPEN) {
                           client.send(JSON.stringify({
-                            type: 'scoreUpdate',
-                            id: zonePlayer.clientId,
-                            value: zonePlayer.score,
+                              type: 'scoreUpdate',
+                              id: zonePlayer.id,
+                              value: zonePlayer.score,
                             }))
                         }});
                       
@@ -256,7 +258,7 @@ wss.on('connection', (ws) => {
                         if (client.readyState === WebSocket.OPEN) {
                           client.send(JSON.stringify({
                             type: 'inventoryUpdate',
-                            id: zonePlayer.clientId,
+                            id: zonePlayer.id,
                             value: zonePlayer.inventory,
                             }))
                         }});
@@ -328,11 +330,14 @@ wss.on('connection', (ws) => {
           }
         });
 
-        ws.send(JSON.stringify({
-          type: 'scoreUpdate',
-          id: clientId,
-          value: player.score,
-        }));
+        wss.clients.forEach(client => {
+          if (client.readyState === WebSocket.OPEN) {
+            client.send(JSON.stringify({
+              type: 'scoreUpdate',
+                id: clientId,
+                value: player.score,
+              }))
+          }});
       }
     } else if (data.type == 'pickup') {
       const player = players.get(clientId);
@@ -355,7 +360,7 @@ wss.on('connection', (ws) => {
         ws.send(JSON.stringify({
           type: 'inventoryUpdate',
           id: clientId,
-          inventory: player.inventory
+          value: player.inventory
         }));
       }
     }
@@ -363,6 +368,24 @@ wss.on('connection', (ws) => {
 
   ws.on('close', () => {
     players.delete(clientId);
+    for (let [zoneKey, zone] of zones) {
+      if (zone.currentMonkeys.has(clientId)) {
+         zone.currentMonkeys.delete(clientId);
+         wss.clients.forEach(client => {
+          if (client.readyState === WebSocket.OPEN) {
+              client.send(JSON.stringify({
+                  type: 'zoneUpdate',
+                  key: zoneKey,
+                  zone: {
+                    ...zone,
+                    currentMonkeys: Array.from(zone.currentMonkeys)
+                  },
+              }));
+            }
+        });
+      }
+    }
+
     wss.clients.forEach(client => {
       if (client.readyState === WebSocket.OPEN) {
         client.send(JSON.stringify({

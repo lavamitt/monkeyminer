@@ -305,19 +305,10 @@
           }
 
           monkeyIdElement.textContent = "monkey_" + myPlayer.id;
-          data.players.sort((a, b) => b.score - a.score);
-          topScoresElement.innerHTML = data.players.map((player) => "monkey_" + player.id + ": " + player.score).join('<br>');
           break;
 
         case 'playerJoin':
-          players.set(data.id, {
-            x: data.x,
-            y: data.y,
-            color: data.color,
-            direction: data.direction,
-            score: data.score,
-            inventory: data.inventory,
-          });
+          players.set(data.id, data.player);
           break;
 
         case 'playerMove':
@@ -339,7 +330,7 @@
           break;
         
         case 'inventoryUpdate':
-          players.get(data.id).inventory = data.inventory;
+          players.get(data.id).inventory = data.value;
           break;
 
         case 'terrainUpdate':
@@ -569,6 +560,7 @@
       const inventoryCanvas = document.getElementById('inventorySlot');
       const inventoryCtx = inventoryCanvas.getContext('2d');
 
+      inventoryCtx.clearRect(0, 0, 48, 48);
       inventoryCtx.fillStyle = 'rgba(68, 68, 68, 0.4)';
       inventoryCtx.fillRect(0, 0, 48, 48);
       inventoryCtx.strokeStyle = 'rgba(255, 255, 255, 0.3)';
