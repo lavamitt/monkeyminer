@@ -90,7 +90,6 @@ function darkenColor(hex, percent) {
     return `#${((1 << 24) + (r << 16) + (g << 8) + b).toString(16).slice(1)}`;
 }
 
-
 function drawMonkeySprite(ctx, x, y, body_color="#B26B47", direction='right', frame=0) {
     // Define the color palette
     const monkeyColors = [
@@ -106,13 +105,12 @@ function drawMonkeySprite(ctx, x, y, body_color="#B26B47", direction='right', fr
     let monkey = [monkeySprite, monkeySpriteMidwalk][frame];
     monkey.forEach((row, i) => {
         row.forEach((pixel, j) => {
-            if (pixel !== 0) {  // 0 is transparent
+            if (pixel !== 0) { 
                 ctx.fillStyle = monkeyColors[pixel];
                 if (direction == 'left') {
                     // If facing left, invert the x-coordinate
                     ctx.fillRect(x + (spriteWidth - 1 - j), y + i, 1, 1);
                 } else {
-                    // If facing right, draw normally
                     ctx.fillRect(x + j, y + i, 1, 1);
                 }
             }

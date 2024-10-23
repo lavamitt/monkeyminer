@@ -108,6 +108,8 @@
       DIRT: 1,
       ORE: 2,
       EMPTY_WITH_BANANA: 3,
+      INCOMPLETE_ZONE: 4,
+      COMPLETE_ZONE: 5,
     });
 
     const dirtPattern = document.createElement('canvas');
@@ -220,10 +222,13 @@
           }
           break;
 
-        case 'scoreUpdate':
+        case 'singleScoreUpdate': 
           if (data.id === myId) {
             scoreElement.textContent = data.value;
           }
+          break;
+
+        case 'scoreUpdate':
           data.players.sort((a, b) => b.score - a.score);
           topScoresElement.innerHTML = data.players.map((player) => "monkey_" + player.id + ": " + player.score).join('<br>');
           break;
@@ -363,6 +368,7 @@
       const patterns = {
         [BLOCK_TYPE.DIRT]: ctx.createPattern(dirtPattern, 'repeat'),
         [BLOCK_TYPE.ORE]: ctx.createPattern(orePattern, 'repeat')
+        
       };
 
       for (let y = startBlockY; y < endBlockY; y++) {

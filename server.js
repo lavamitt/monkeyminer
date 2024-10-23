@@ -48,6 +48,8 @@ const BLOCK_TYPE = Object.freeze({
   DIRT: 1,
   ORE: 2,
   EMPTY_WITH_BANANA: 3,
+  INCOMPLETE_ZONE: 4,
+  COMPLETE_ZONE: 5
 });
 
 const terrain = new Array(WORLD_SIZE).fill(null)
@@ -62,7 +64,6 @@ for (let y = startY; y < startY + START_AREA_SIZE; y++) {
   }
 }
 
-
 // Add random ore
 for (let y = 0; y < WORLD_SIZE; y++) {
   for (let x = 0; x < WORLD_SIZE; x++) {
@@ -72,6 +73,86 @@ for (let y = 0; y < WORLD_SIZE; y++) {
       }
     }
   }
+}
+
+// Add zones
+const zones = new Map();
+const NUM_ZONES = 50;
+const MIN_DISTANCE_BETWEEN_ZONES = 10;
+const MIN_ZONE_SIDE = 1;
+const MAX_ZONE_SIDE = 10;
+const MIN_REQUIRED_MONKEYS = 1;
+const MAX_REQUIRED_MONKEYS = 15;
+
+function distanceToNearestZone(x, y) {
+  for (let [_, zone] of zones) {
+      // Find closest x and y points on the zone
+      const closestX = Math.max(zone.x, Math.min(x, zone.x + zone.width - 1));
+      const closestY = Math.max(zone.y, Math.min(y, zone.y + zone.height - 1));
+      
+      // Calculate distance to closest point
+      const distance = Math.sqrt(
+          Math.pow(x - closestX, 2) + 
+          Math.pow(y - closestY, 2)
+      );
+      
+      if (distance < MIN_DISTANCE_BETWEEN_ZONES) {
+          return false;
+      }
+  }
+  return true;
+}
+
+let zones_created = 0;
+while (zones_created < NUM_ZONES) {
+  const zone_width = Math.floor(Math.random() * (MAX_ZONE_SIDE - MIN_ZONE_SIDE) + MIN_ZONE_SIDE)
+  const zone_height = Math.floor(Math.random() * (MAX_ZONE_SIDE - MIN_ZONE_SIDE) + MIN_ZONE_SIDE)
+
+  const x = Math.floor(Math.random() * (WORLD_SIZE - zone_width));
+  const y = Math.floor(Math.random() * (WORLD_SIZE - zone_height));
+
+  let is_valid_location = true;
+  // Check if entire zone area is empty and far from other zones
+  for (let dy = 0; dy < zone_height; dy++) {
+      for (let dx = 0; dx < zone_width; dx++) {
+          if (terrain[y + dy][x + dx] !== BLOCK_TYPE.EMPTY || 
+              !distanceToNearestZone(x + dx, y + dy)) {
+              is_valid_location = false;
+              break;
+          }
+      }
+      if (!is_valid_location) break;
+  }
+
+    if (is_valid_location) {
+      for (let dy = 0; dy < ZONE_HEIGHT; dy++) {
+          for (let dx = 0; dx < ZONE_WIDTH; dx++) {
+              terrain[y + dy][x + dx] = BLOCK_TYPE.INCOMPLETE_ZONE;
+          }
+      }
+      
+      const required_monkeys = Math.floor(Math.random() * (MAX_REQUIRED_MONKEYS - MIN_REQUIRED_MONKEYS) + MIN_REQUIRED_MONKEYS);
+      zones.set(`${x},${y}`, { // TOP LEFT CORNER OF ZONE
+          x,  
+          y,
+          width: zone_width,
+          height: zone_height,
+          requiredMonkeys: required_monkeys,
+          currentMonkeys: new Set(),
+          completed: false
+      });
+      zones_created += 1;
+  }
+}
+
+function isInZone(blockX, blockY) {
+  for (let [_, zone] of zones) {
+      if (blockX >= zone.x && blockX < zone.x + zone.width &&
+          blockY >= zone.y && blockY < zone.y + zone.height) {
+          return `${zone.x},${zone.y}`;
+      }
+  }
+  return null;
 }
 
 // Store player positions and colors
@@ -138,6 +219,90 @@ wss.on('connection', (ws) => {
             }));
           }
         });
+
+        const playerBlockX = Math.floor(player.x / GRID_SIZE);
+        const playerBlockY = Math.floor(player.y / GRID_SIZE);
+        const zoneKey = isInZone(playerBlockX, playerBlockY);
+        if (zoneKey && player.inventory.length > 0) {
+            const zone = zones.get(zoneKey);
+            if (zone && !zone.completed) {
+                zone.currentMonkeys.add(clientId);
+                if (zone.currentMonkeys.length >= zone.requiredMonkeys) {
+                  zone.completed = true;
+                  
+                  zone.currentMonkeys.forEach(playerId => {
+                      const zonePlayer = players.get(playerId);
+                      if (zonePlayer) {
+                          zonePlayer.score += 10 * zone.currentMonkeys.length
+                          zonePlayer.inventory = [];  // Remove banana
+                      }
+
+                      wss.clients.forEach(client => {
+                        if (client.readyState === WebSocket.OPEN) {
+                          client.send(JSON.stringify({
+                            type: 'singleScoreUpdate',
+                            id: zonePlayer.clientId,
+                            value: zonePlayer.score,
+                            }))
+                        }});
+                      
+                      wss.clients.forEach(client => {
+                        if (client.readyState === WebSocket.OPEN) {
+                          client.send(JSON.stringify({
+                            type: 'inventoryUpdate',
+                            id: zonePlayer.clientId,
+                            value: zonePlayer.inventory,
+                            }))
+                        }});
+                    });
+                  
+                  // wss.clients.forEach(client => {
+                  //     if (client.readyState === WebSocket.OPEN) {
+                  //         client.send(JSON.stringify({
+                  //             type: 'zoneComplete',
+                  //             x: playerBlockX,
+                  //             y: playerBlockY,
+                  //             playersRewarded: Array.from(zone.currentMonkeys)
+                  //         }));
+                  //     }
+                  // });
+                  
+                  for (let dy = 0; dy < zone.height; dy++) {
+                    for (let dx = 0; dx < zone.width; dx++) {
+                        terrain[y + dy][x + dx] = BLOCK_TYPE.COMPLETE_ZONE;
+                        wss.clients.forEach(client => {
+                          if (client.readyState === WebSocket.OPEN) {
+                            client.send(JSON.stringify({
+                              type: 'terrainUpdate',
+                              x: x + dx,
+                              y: y + dy,
+                              value: terrain[y + dy][x + dx]
+                            }));
+                          }
+                        }
+                      );
+                    }
+                  }
+
+                  wss.clients.forEach(client => {
+                    if (client.readyState === WebSocket.OPEN) {
+                      client.send(JSON.stringify({
+                        type: 'scoreUpdate',
+                        players: Array.from(players.entries()).map(([id, data]) => ({
+                          id,
+                          score: data.score
+                        })),
+                      }));
+                    }
+                  });
+              }
+            }
+        } else {
+            // Remove player from any zones they were in
+            for (let [_, zone] of zones) {
+                zone.currentMonkeys.delete(clientId);
+            }
+        }
       }
     } else if (data.type === 'mine') {
       const player = players.get(clientId);
@@ -170,19 +335,23 @@ wss.on('connection', (ws) => {
           }
         });
 
+        ws.send(JSON.stringify({
+          type: 'singleScoreUpdate',
+          id: clientId,
+          value: player.score,
+        }));
+
         wss.clients.forEach(client => {
           if (client.readyState === WebSocket.OPEN) {
             client.send(JSON.stringify({
               type: 'scoreUpdate',
-              id: clientId,
-              value: player.score,
               players: Array.from(players.entries()).map(([id, data]) => ({
                 id,
                 score: data.score
               })),
             }));
           }
-        })
+        });
       }
     } else if (data.type == 'pickup') {
       const player = players.get(clientId);
