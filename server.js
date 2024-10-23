@@ -76,14 +76,14 @@ for (let y = 0; y < WORLD_SIZE; y++) {
 
 // Add zones
 const zones = new Map();
-const NUM_ZONES = 50;
+const NUM_ZONES = 1000;
 const MIN_DISTANCE_BETWEEN_ZONES = 10;
 const MIN_ZONE_SIDE = 1;
 const MAX_ZONE_SIDE = 10;
 const MIN_REQUIRED_MONKEYS = 1;
 const MAX_REQUIRED_MONKEYS = 15;
 
-function distanceToNearestZone(x, y) {
+function tooCloseToNearestZone(x, y) {
   for (let [_, zone] of zones) {
       // Find closest x and y points on the zone
       const closestX = Math.max(zone.x, Math.min(x, zone.x + zone.width - 1));
@@ -96,36 +96,36 @@ function distanceToNearestZone(x, y) {
       );
       
       if (distance < MIN_DISTANCE_BETWEEN_ZONES) {
-          return false;
+          return true;
       }
   }
-  return true;
+  return false;
 }
 
 let zones_created = 0;
 while (zones_created < NUM_ZONES) {
-  const zone_width = Math.floor(Math.random() * (MAX_ZONE_SIDE - MIN_ZONE_SIDE) + MIN_ZONE_SIDE)
-  const zone_height = Math.floor(Math.random() * (MAX_ZONE_SIDE - MIN_ZONE_SIDE) + MIN_ZONE_SIDE)
+    const zone_width = Math.floor(Math.random() * (MAX_ZONE_SIDE - MIN_ZONE_SIDE) + MIN_ZONE_SIDE)
+    const zone_height = Math.floor(Math.random() * (MAX_ZONE_SIDE - MIN_ZONE_SIDE) + MIN_ZONE_SIDE)
 
-  const x = Math.floor(Math.random() * (WORLD_SIZE - zone_width));
-  const y = Math.floor(Math.random() * (WORLD_SIZE - zone_height));
+    const x = Math.floor(Math.random() * (WORLD_SIZE - zone_width));
+    const y = Math.floor(Math.random() * (WORLD_SIZE - zone_height));
 
-  let is_valid_location = true;
-  // Check if entire zone area is empty and far from other zones
-  for (let dy = 0; dy < zone_height; dy++) {
-      for (let dx = 0; dx < zone_width; dx++) {
-          if (terrain[y + dy][x + dx] !== BLOCK_TYPE.EMPTY || 
-              !distanceToNearestZone(x + dx, y + dy)) {
-              is_valid_location = false;
-              break;
-          }
-      }
-      if (!is_valid_location) break;
-  }
+    let is_valid_location = true;
+    // Check if entire zone area is empty and far from other zones
+    for (let dy = 0; dy < zone_height; dy++) {
+        for (let dx = 0; dx < zone_width; dx++) {
+            if (terrain[y + dy][x + dx] == BLOCK_TYPE.EMPTY || 
+                tooCloseToNearestZone(x + dx, y + dy)) {
+                is_valid_location = false;
+                break;
+            }
+        }
+        if (!is_valid_location) break;
+    }
 
     if (is_valid_location) {
-      for (let dy = 0; dy < ZONE_HEIGHT; dy++) {
-          for (let dx = 0; dx < ZONE_WIDTH; dx++) {
+      for (let dy = 0; dy < zone_height; dy++) {
+          for (let dx = 0; dx < zone_width; dx++) {
               terrain[y + dy][x + dx] = BLOCK_TYPE.ZONE;
           }
       }
@@ -183,7 +183,11 @@ wss.on('connection', (ws) => {
       ...data
     })),
     terrain: terrain,
-    zones: zones,
+    zones: Array.from(zones.entries()).map(([key, zone]) => ({
+      key,
+      ...zone,
+      currentMonkeys: Array.from(zone.currentMonkeys)
+    })),
     gridSize: GRID_SIZE
   }));
 
@@ -224,23 +228,28 @@ wss.on('connection', (ws) => {
         const playerBlockY = Math.floor(player.y / GRID_SIZE);
         const zoneKey = isInZone(playerBlockX, playerBlockY);
         if (zoneKey && player.inventory.length > 0) {
+            console.log("MONKEY IN ZONE")
+            console.log(zoneKey)
+            console.log(player.inventory.length)
             const zone = zones.get(zoneKey);
             if (zone && !zone.completed) {
                 zone.currentMonkeys.add(clientId);
-                if (zone.currentMonkeys.length >= zone.requiredMonkeys) {
+                if (zone.currentMonkeys.size >= zone.requiredMonkeys) {
                   zone.completed = true;
+
+                  console.log("COMPLETED!")
                   
                   zone.currentMonkeys.forEach(playerId => {
                       const zonePlayer = players.get(playerId);
                       if (zonePlayer) {
-                          zonePlayer.score += 10 * zone.currentMonkeys.length
+                          zonePlayer.score += 10 * zone.currentMonkeys.size
                           zonePlayer.inventory = [];  // Remove banana
                       }
 
                       wss.clients.forEach(client => {
                         if (client.readyState === WebSocket.OPEN) {
                           client.send(JSON.stringify({
-                            type: 'singleScoreUpdate',
+                            type: 'scoreUpdate',
                             id: zonePlayer.clientId,
                             value: zonePlayer.score,
                             }))
@@ -255,52 +264,38 @@ wss.on('connection', (ws) => {
                             }))
                         }});
                     });
-                  
-                  // wss.clients.forEach(client => {
-                  //     if (client.readyState === WebSocket.OPEN) {
-                  //         client.send(JSON.stringify({
-                  //             type: 'zoneComplete',
-                  //             x: playerBlockX,
-                  //             y: playerBlockY,
-                  //             playersRewarded: Array.from(zone.currentMonkeys)
-                  //         }));
-                  //     }
-                  // });
-
-                  for (let dy = 0; dy < zone.height; dy++) {
-                    for (let dx = 0; dx < zone.width; dx++) {
-                        terrain[y + dy][x + dx] = BLOCK_TYPE.COMPLETE_ZONE;
-                        wss.clients.forEach(client => {
-                          if (client.readyState === WebSocket.OPEN) {
-                            client.send(JSON.stringify({
-                              type: 'terrainUpdate',
-                              x: x + dx,
-                              y: y + dy,
-                              value: terrain[y + dy][x + dx]
-                            }));
-                          }
-                        }
-                      );
-                    }
-                  }
-
-                  wss.clients.forEach(client => {
-                    if (client.readyState === WebSocket.OPEN) {
+                }
+                wss.clients.forEach(client => {
+                  if (client.readyState === WebSocket.OPEN) {
                       client.send(JSON.stringify({
-                        type: 'scoreUpdate',
-                        players: Array.from(players.entries()).map(([id, data]) => ({
-                          id,
-                          score: data.score
-                        })),
+                          type: 'zoneUpdate',
+                          key: zoneKey,
+                          zone: {
+                            ...zone,
+                            currentMonkeys: Array.from(zone.currentMonkeys)
+                          },
                       }));
-                    }
-                  });
-              }
+                  }
+              });
             }
         } else {
             // Remove player from any zones they were in
-            for (let [_, zone] of zones) {
-                zone.currentMonkeys.delete(clientId);
+            for (let [zoneKey, zone] of zones) {
+                if (zone.currentMonkeys.has(clientId)) {
+                   zone.currentMonkeys.delete(clientId);
+                   wss.clients.forEach(client => {
+                    if (client.readyState === WebSocket.OPEN) {
+                        client.send(JSON.stringify({
+                            type: 'zoneUpdate',
+                            key: zoneKey,
+                            zone: {
+                              ...zone,
+                              currentMonkeys: Array.from(zone.currentMonkeys)
+                            },
+                        }));
+                    }
+                });
+                }
             }
         }
       }
@@ -313,7 +308,8 @@ wss.on('connection', (ws) => {
       if (blockX >= 0 && blockX < WORLD_SIZE && 
           blockY >= 0 && blockY < WORLD_SIZE &&
           terrain[blockY][blockX] !== BLOCK_TYPE.EMPTY &&
-          terrain[blockY][blockX] !== BLOCK_TYPE.EMPTY_WITH_BANANA) {
+          terrain[blockY][blockX] !== BLOCK_TYPE.EMPTY_WITH_BANANA &&
+          terrain[blockY][blockX] !== BLOCK_TYPE.ZONE) {
         if (terrain[blockY][blockX] == BLOCK_TYPE.ORE) {
           player.score += 1;
         }
@@ -336,22 +332,10 @@ wss.on('connection', (ws) => {
         });
 
         ws.send(JSON.stringify({
-          type: 'singleScoreUpdate',
+          type: 'scoreUpdate',
           id: clientId,
           value: player.score,
         }));
-
-        wss.clients.forEach(client => {
-          if (client.readyState === WebSocket.OPEN) {
-            client.send(JSON.stringify({
-              type: 'scoreUpdate',
-              players: Array.from(players.entries()).map(([id, data]) => ({
-                id,
-                score: data.score
-              })),
-            }));
-          }
-        });
       }
     } else if (data.type == 'pickup') {
       const player = players.get(clientId);

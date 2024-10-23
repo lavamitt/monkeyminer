@@ -1,7 +1,7 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-  <title>Multiplayer Mining Game</title>
+  <title>monkey miner!</title>
   <style>
     body {
       margin: 0;
@@ -77,6 +77,8 @@
   <script type="module">
     import { drawMonkeySprite } from './monkey.js';
     import { drawBananaSprite } from './banana.js';
+
+    // SET UP GAME CANVAS
     const canvas = document.getElementById('game');
     const ctx = canvas.getContext('2d');
     const playerCountElement = document.getElementById('playerCount');
@@ -92,7 +94,7 @@
     resizeCanvas();
     window.addEventListener('resize', resizeCanvas);
 
-    // Game state
+    // GAME STATE
     const GRID_SIZE = 32;
     let players = new Map();
     let myId = null;
@@ -109,10 +111,10 @@
       DIRT: 1,
       ORE: 2,
       EMPTY_WITH_BANANA: 3,
-      ZONE: 5
+      ZONE: 4
     });
-    
 
+    // TILE PATTERNS
     function createDirtPattern() {
       const dirtPattern = document.createElement('canvas');
       dirtPattern.width = GRID_SIZE;
@@ -183,6 +185,12 @@
       return ctx.createPattern(orePattern, 'repeat');
     }
 
+    // Create patterns for each block type
+    const patterns = {
+        [BLOCK_TYPE.DIRT]: createDirtPattern(),
+        [BLOCK_TYPE.ORE]: createOrePattern(),
+    };
+
     function createZonePattern(completed) {
       const patternCanvas = document.createElement('canvas');
       patternCanvas.width = GRID_SIZE;
@@ -225,6 +233,7 @@
       return patternCtx.createPattern(patternCanvas, 'repeat');
   }
 
+    // SET UP WEBSOCKET
     const ws = new WebSocket('ws://localhost:3000');
 
     ws.onmessage = (event) => {
@@ -234,7 +243,9 @@
         case 'init':
           myId = data.id;
           terrain = data.terrain;
-          zones = data.zones;
+          data.zones.forEach(zone => {
+            zones.set(zone.key, zone)
+          })
           data.players.forEach(player => {
             players.set(player.id, player);
           });
@@ -254,7 +265,9 @@
             x: data.x,
             y: data.y,
             color: data.color,
-            direction: data.direction
+            direction: data.direction,
+            score: data.score,
+            inventory: data.inventory,
           });
           break;
 
@@ -268,15 +281,8 @@
           }
           break;
 
-        case 'singleScoreUpdate': 
-          if (data.id === myId) {
-            scoreElement.textContent = data.value;
-          }
-          break;
-
         case 'scoreUpdate':
-          data.players.sort((a, b) => b.score - a.score);
-          topScoresElement.innerHTML = data.players.map((player) => "monkey_" + player.id + ": " + player.score).join('<br>');
+          players.get(data.id).score = data.value
           break;
 
         case 'playerLeave':
@@ -289,6 +295,10 @@
 
         case 'terrainUpdate':
           terrain[data.y][data.x] = data.value;
+          break;
+
+        case 'zoneUpdate':
+          zones.set(data.key, data.zone);
           break;
       }
     };
@@ -375,7 +385,7 @@
         const blockX = Math.floor(newX / GRID_SIZE);
         const blockY = Math.floor(newY / GRID_SIZE);
         
-        if (terrain[blockY]?.[blockX] == BLOCK_TYPE.EMPTY || terrain[blockY]?.[blockX] == BLOCK_TYPE.EMPTY_WITH_BANANA) {
+        if (terrain[blockY]?.[blockX] == BLOCK_TYPE.EMPTY || terrain[blockY]?.[blockX] == BLOCK_TYPE.EMPTY_WITH_BANANA || terrain[blockY]?.[blockX] == BLOCK_TYPE.ZONE) {
           moved = newX !== myPlayer.x || newY !== myPlayer.y;
           myPlayer.x = newX;
           myPlayer.y = newY;
@@ -410,12 +420,6 @@
       const endBlockX = startBlockX + Math.ceil(canvas.width / GRID_SIZE) + 1;
       const endBlockY = startBlockY + Math.ceil(canvas.height / GRID_SIZE) + 1;
 
-      // Create patterns for each block type
-      const patterns = {
-        [BLOCK_TYPE.DIRT]: createDirtPattern(),
-        [BLOCK_TYPE.ORE]: createOrePattern(),
-      };
-
       for (let y = startBlockY; y < endBlockY; y++) {
         for (let x = startBlockX; x < endBlockX; x++) {
           let block = terrain[y]?.[x];
@@ -423,7 +427,7 @@
             const screenX = x * GRID_SIZE - viewportX;
             const screenY = y * GRID_SIZE - viewportY;
 
-            if (terrain[y][x] === BLOCK_TYPE.ZONE) {
+            if (block === BLOCK_TYPE.ZONE) {
                 // Find which zone this block belongs to
                 for (let [coords, zone] of zones) {
                     const [zx, zy] = coords.split(',').map(Number);
@@ -436,7 +440,7 @@
                         // If this is the center block of the zone, draw the requirement text
                         const centerX = Math.floor(zx + zone.width/2) === x;
                         const centerY = Math.floor(zy + zone.height/2) === y;
-                        if (centerX && centerY) {
+                        if (centerX && centerY && !zone.completed) {
                             // Draw requirement text
                             ctx.save();
                             ctx.fillStyle = 'white';
@@ -445,7 +449,7 @@
                             ctx.font = 'bold 20px Arial';
                             ctx.textAlign = 'center';
                             ctx.textBaseline = 'middle';
-                            const text = `${zone.currentMonkeys.size}/${zone.requiredMonkeys}`;
+                            const text = `${zone.currentMonkeys.length}/${zone.requiredMonkeys}`;
                             const textX = screenX + GRID_SIZE/2;
                             const textY = screenY + GRID_SIZE/2;
                             // Draw text stroke
@@ -457,9 +461,7 @@
                         break;
                     }
                 }
-            }
-
-            if (block === BLOCK_TYPE.EMPTY_WITH_BANANA) {
+            } else if (block === BLOCK_TYPE.EMPTY_WITH_BANANA) {
               drawBananaSprite(ctx, screenX, screenY);
             } else {
               // Get pattern based on block type
@@ -497,7 +499,7 @@
         
         // Only animate if player is moving
         const frame = player.moving ? animationFrame : 0;
-        drawMonkeySprite(ctx, screenX, screenY, player.color, player.direction, frame); // player.color, player.direction, frame
+        drawMonkeySprite(ctx, screenX, screenY, player.color, player.direction, frame);
         
         // Draw outline for current player
         if (id === myId) {
@@ -520,6 +522,12 @@
       }
 
       playerCountElement.textContent = players.size;
+      if (myPlayer) {
+        scoreElement.textContent = myPlayer.score;
+      }
+      const current_players = Array.from(players.values());
+      current_players.sort((a, b) => b.score - a.score);
+      topScoresElement.innerHTML = current_players.map((player) => "monkey_" + player.id + ": " + player.score).join('<br>');
 
       requestAnimationFrame(gameLoop);
     }
