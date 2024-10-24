@@ -283,7 +283,7 @@
 
     // SET UP WEBSOCKET
     // 13.59.50.220
-    const ws = new WebSocket('ws://13.59.50.220:3000');
+    const ws = new WebSocket('ws://localhost:3000');
 
     ws.onmessage = (event) => {
       const data = JSON.parse(event.data);
@@ -568,6 +568,17 @@
 
       if (myPlayer && myPlayer.inventory.length > 0) {
           drawBananaSprite(inventoryCtx, 8, 8);
+
+          inventoryCtx.fillStyle = 'white'; 
+          inventoryCtx.font = '16px Arial';
+          inventoryCtx.textBaseline = 'bottom';
+          inventoryCtx.textAlign = 'right';
+    
+          inventoryCtx.fillText(
+            myPlayer.inventory.length.toString(),
+            44,  // X position (48 - 4 for padding)
+            44   // Y position (48 - 4 for padding)
+          );
       }
 
       playerCountElement.textContent = players.size;

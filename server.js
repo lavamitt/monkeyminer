@@ -252,7 +252,7 @@ wss.on('connection', (ws) => {
                       console.log(zonePlayer);
                       if (zonePlayer) {
                           zonePlayer.score += 10 * zone.currentMonkeys.size;
-                          zonePlayer.inventory = [];  // Remove banana
+                          zonePlayer.inventory.pop();  // Remove banana
                       }
                       console.log(zonePlayer);
 
@@ -354,8 +354,9 @@ wss.on('connection', (ws) => {
       const player = players.get(clientId);
       const blockX = data.blockX;
       const blockY = data.blockY;
-      if (terrain[blockY][blockX] === BLOCK_TYPE.EMPTY_WITH_BANANA && player.inventory.length == 0) {
-        player.inventory = ["banana"];
+      if (terrain[blockY][blockX] === BLOCK_TYPE.EMPTY_WITH_BANANA) {
+        player.inventory.push("banana");
+
         terrain[blockY][blockX] = BLOCK_TYPE.EMPTY;
         wss.clients.forEach(client => {
           if (client.readyState === WebSocket.OPEN) {
