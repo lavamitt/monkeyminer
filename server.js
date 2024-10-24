@@ -420,8 +420,10 @@ wss.on('connection', (ws) => {
         }
       });
     } else if (data.type == 'placeLetter') {
-      const letterKey = `${data.x},${data.y}`;
-      if (terrain[data.y][data.x] === BLOCK_TYPE.EMPTY) {
+      const blockX = data.blockX;
+      const blockY = data.blockY;
+      const letterKey = `${blockX},${blockY}`;
+      if (terrain[blockY][blockX] === BLOCK_TYPE.EMPTY) {
         // Store the letter
         letters.set(letterKey, {
             message: data.message,
@@ -430,22 +432,15 @@ wss.on('connection', (ws) => {
         });
         
         // Update terrain to show envelope
-        terrain[data.y][data.x] = BLOCK_TYPE.EMPTY_WITH_ENVELOPE;
+        terrain[blockY][blockX] = BLOCK_TYPE.EMPTY_WITH_ENVELOPE;
         
         wss.clients.forEach(client => {
             if (client.readyState === WebSocket.OPEN) {
                 client.send(JSON.stringify({
                     type: 'terrainUpdate',
-                    x: data.x,
-                    y: data.y,
-                    value: terrain[data.y][data.x]
-                }));
-                client.send(JSON.stringify({
-                    type: 'letterPlaced',
-                    x: data.x,
-                    y: data.y,
-                    message: data.message,
-                    authorId: clientId
+                    x: blockX,
+                    y: blockY,
+                    value: terrain[blockY][blockX]
                 }));
             }
         });

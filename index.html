@@ -244,7 +244,6 @@
     let terrain = [];
     let zones = new Map();
     let messages = new Map();
-    let letters = new Map();
     let animationFrame = 0;
     let lastAnimationUpdate = 0;
     const ANIMATION_SPEED = 150;
@@ -544,19 +543,8 @@
             expiration: data.expiration
           })
           break;
-        
-        case 'letterPlaced':
-          letters.set(`${data.x},${data.y}`, {
-            authorId: data.authorId,
-            message: data.message,
-          })
-          break;
 
         case 'letterToRead':
-          letters.set(`${data.x},${data.y}`, {
-            authorId: data.authorId,
-            message: data.message
-          })
           const author = players.get(data.authorId);
           letterAuthorElement.textContent = author ? `monkey_${data.authorId}` : 'Unknown Monkey';
           letterTimeElement.textContent = new Date(data.timestamp).toLocaleString();
@@ -671,8 +659,8 @@
           ws.send(JSON.stringify({
             type: 'placeLetter',
             message: letter,
-            x: targetBlock.x,
-            y: targetBlock.y
+            blockX: targetBlock.x,
+            blockY: targetBlock.y
           }));
         }
         letterInputElement.value = "";
