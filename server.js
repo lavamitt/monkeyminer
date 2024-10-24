@@ -33,6 +33,16 @@ const server = http.createServer((req, res) => {
         res.end(data);
       }
     });
+  } else if (req.url === '/envelope.js') {
+    fs.readFile('./sprites/envelope.js', (err, data) => {
+      if (err) {
+        res.writeHead(404);
+        res.end('File not found');
+      } else {
+        res.writeHead(200, { 'Content-Type': 'application/javascript' });
+        res.end(data);
+      }
+    });
   } else if (req.url === '/favicon.ico') {
     fs.readFile('./favicon.ico', (err, data) => {
       if (err) {
@@ -58,7 +68,8 @@ const BLOCK_TYPE = Object.freeze({
   DIRT: 1,
   ORE: 2,
   EMPTY_WITH_BANANA: 3,
-  ZONE: 4
+  EMPTY_WITH_ENVELOPE: 4,
+  ZONE: 5
 });
 
 const terrain = new Array(WORLD_SIZE).fill(null)
@@ -166,8 +177,8 @@ function isInZone(blockX, blockY) {
 
 // Store player positions and colors
 const players = new Map();
-
 const messages = new Map();
+const letters = new Map();
 
 function generateColor() {
   return '#' + Math.floor(Math.random()*16777215).toString(16);
@@ -390,7 +401,7 @@ wss.on('connection', (ws) => {
           value: player.inventory
         }));
       }
-    } else if (data.type = 'chat') {
+    } else if (data.type == 'chat') {
       const current_timestamp = Date.now()
       const expiration = current_timestamp + 5 * 1000 // 5 seconds
       messages.set(data.id, {
@@ -408,7 +419,53 @@ wss.on('connection', (ws) => {
           }));
         }
       });
-    }
+    } else if (data.type == 'placeLetter') {
+      const letterKey = `${data.x},${data.y}`;
+      if (terrain[data.y][data.x] === BLOCK_TYPE.EMPTY) {
+        // Store the letter
+        letters.set(letterKey, {
+            message: data.message,
+            authorId: clientId,
+            timestamp: Date.now()
+        });
+        
+        // Update terrain to show envelope
+        terrain[data.y][data.x] = BLOCK_TYPE.EMPTY_WITH_ENVELOPE;
+        
+        wss.clients.forEach(client => {
+            if (client.readyState === WebSocket.OPEN) {
+                client.send(JSON.stringify({
+                    type: 'terrainUpdate',
+                    x: data.x,
+                    y: data.y,
+                    value: terrain[data.y][data.x]
+                }));
+                client.send(JSON.stringify({
+                    type: 'letterPlaced',
+                    x: data.x,
+                    y: data.y,
+                    message: data.message,
+                    authorId: clientId
+                }));
+            }
+        });
+      }
+    } else if (data.type == 'read') {
+      const blockX = data.blockX;
+      const blockY = data.blockY;
+      if (terrain[blockY][blockX] === BLOCK_TYPE.EMPTY_WITH_ENVELOPE) {
+        const letterKey = `${blockX},${blockY}`;
+        const letter = letters.get(letterKey);
+
+        ws.send(JSON.stringify({
+          type: 'letterToRead',
+          x: data.x,
+          y: data.y,
+          authorId: letter.authorId,
+          message: letter.message,
+          timestamp: letter.timestamp
+        }));
+    }}
   });
 
   ws.on('close', () => {

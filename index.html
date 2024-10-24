@@ -75,12 +75,97 @@
       border-color: #888;
       background: rgba(0, 0, 0, 0.7);
     }
+    #letterUI {
+      position: fixed;
+      top: 50%;
+      left: 50%;
+      transform: translate(-50%, -50%);
+      background: rgba(0, 0, 0, 0.8);
+      padding: 20px;
+      border-radius: 10px;
+      border: 2px solid #666;
+    }
+
+    #letterInput {
+      width: 300px;
+      height: 200px;
+      padding: 10px;
+      color: white;
+      font-family: monospace;
+      background: rgba(0, 0, 0, 0.5);
+      border-radius: 5px;
+      border: 2px solid #666;
+      font-size: 14px;
+      outline: none;
+      resize: none;
+    }
+
+    #letterInput:focus {
+      border-color: #888;
+      background: rgba(0, 0, 0, 0.7);
+    }
+
+    #letterInput::placeholder {
+      color: rgba(255, 255, 255, 0.5);
+    }
+    #letterReadingUI {
+      position: fixed;
+      top: 50%;
+      left: 50%;
+      transform: translate(-50%, -50%);
+      background: rgba(0, 0, 0, 0.9);
+      padding: 20px;
+      border-radius: 10px;
+      border: 2px solid #666;
+      color: white;
+      font-family: monospace;
+      max-width: 80%;
+      max-height: 80%;
+    }
+
+    .letter-content {
+      display: flex;
+      flex-direction: column;
+      gap: 10px;
+    }
+
+    .letter-header {
+      color: #888;
+      font-size: 12px;
+      border-bottom: 1px solid #666;
+      padding-bottom: 10px;
+    }
+
+    #letterText {
+      white-space: pre-wrap;
+      overflow-y: auto;
+      max-height: 300px;
+      padding: 10px;
+      background: rgba(0, 0, 0, 0.3);
+      border-radius: 5px;
+    }
+
+    #closeLetter {
+      align-self: flex-end;
+      background: #666;
+      border: none;
+      color: white;
+      padding: 5px 15px;
+      border-radius: 5px;
+      cursor: pointer;
+      font-family: monospace;
+    }
+
+    #closeLetter:hover {
+      background: #888;
+    }
   </style>
 </head>
 <body>
   <canvas id="game"></canvas>
   <script src="monkey.js" type="module"></script>
   <script src="banana.js" type="module"></script>
+  <script src="envelope.js" type="module"></script>
   <div id="info">
     Players Online: <span id="playerCount">0</span><br>
     Position: <span id="position">0, 0</span><br>
@@ -91,7 +176,11 @@
     Arrow keys to move<br>
     Space to mine the highlighted block<br>
     Q to pick up a highlighted banana<br>
-    T to send a chat message
+    T to send a chat message<br>
+    L to write and place a letter (must be facing empty square)<br>
+    R to read highlighted letter<br>
+    Bring the needed number of monkeys with bananas<br>
+    - to the red zones for a reward!
   </div>
   <div id="topScores">
     Top Scores:<br>
@@ -99,12 +188,30 @@
   </div>
   <canvas id="inventorySlot" width="48" height="48"></canvas>
   <input type="text" id="chatInput" placeholder="Press Enter to chat..." maxlength="100">
+  <div id="letterUI" style="display: none;">
+    <textarea 
+      id="letterInput" 
+      placeholder="Write your letter here... Press Enter to confirm, Escape to cancel" 
+      maxlength="500"
+    ></textarea>
+  </div>
+  <div id="letterReadingUI" style="display: none;">
+    <div class="letter-content">
+      <div class="letter-header">
+        From: <span id="letterAuthor"></span><br>
+        Time: <span id="letterTime"></span>
+      </div>
+      <div id="letterText"></div>
+      <button id="closeLetter">Close</button>
+    </div>
+  </div>
 
   <script type="module">
     import { drawMonkeySprite } from './monkey.js';
     import { drawBananaSprite } from './banana.js';
+    import { drawEnvelopeSprite } from './envelope.js';
 
-    // SET UP GAME CANVAS
+    // SET UP GAME ELEMENTS
     const canvas = document.getElementById('game');
     const ctx = canvas.getContext('2d');
     const playerCountElement = document.getElementById('playerCount');
@@ -113,6 +220,13 @@
     const topScoresElement = document.getElementById('scores');
     const monkeyIdElement = document.getElementById('monkeyId');
     const chatInputElement = document.getElementById('chatInput');
+    const letterUIElement = document.getElementById('letterUI');
+    const letterInputElement = document.getElementById('letterInput');
+    const letterReadingUIElement = document.getElementById('letterReadingUI');
+    const letterAuthorElement = document.getElementById('letterAuthor');
+    const letterTimeElement = document.getElementById('letterTime');
+    const letterTextElement = document.getElementById('letterText');
+    const closeLetterButton = document.getElementById('closeLetter');
 
     function resizeCanvas() {
       canvas.width = window.innerWidth;
@@ -130,6 +244,7 @@
     let terrain = [];
     let zones = new Map();
     let messages = new Map();
+    let letters = new Map();
     let animationFrame = 0;
     let lastAnimationUpdate = 0;
     const ANIMATION_SPEED = 150;
@@ -139,7 +254,8 @@
       DIRT: 1,
       ORE: 2,
       EMPTY_WITH_BANANA: 3,
-      ZONE: 4
+      EMPTY_WITH_ENVELOPE: 4,
+      ZONE: 5
     });
 
     // TILE PATTERNS
@@ -359,7 +475,7 @@
 
     // SET UP WEBSOCKET
     // 13.59.50.220
-    const ws = new WebSocket('ws://13.59.50.220:3000');
+    const ws = new WebSocket('ws://localhost:3000');
 
     ws.onmessage = (event) => {
       const data = JSON.parse(event.data);
@@ -427,6 +543,26 @@
             message: data.message,
             expiration: data.expiration
           })
+          break;
+        
+        case 'letterPlaced':
+          letters.set(`${data.x},${data.y}`, {
+            authorId: data.authorId,
+            message: data.message,
+          })
+          break;
+
+        case 'letterToRead':
+          letters.set(`${data.x},${data.y}`, {
+            authorId: data.authorId,
+            message: data.message
+          })
+          const author = players.get(data.authorId);
+          letterAuthorElement.textContent = author ? `monkey_${data.authorId}` : 'Unknown Monkey';
+          letterTimeElement.textContent = new Date(data.timestamp).toLocaleString();
+          letterTextElement.textContent = data.message;
+          letterReadingUIElement.style.display = 'block';
+          break;
       }
     };
 
@@ -447,10 +583,14 @@
     }
 
     // Handle keyboard input
+    closeLetterButton.addEventListener('click', () => {
+      letterReadingUIElement.style.display = 'none';
+    });
+
     const keys = new Set();
     window.addEventListener('keydown', (e) => {
       keys.add(e.key);
-      if (e.key === ' ') { // Space bar to mine
+      if (e.key === ' ' && document.activeElement !== chatInputElement && document.activeElement !== letterInputElement) { // Space bar to mine
         const myPlayer = players.get(myId);
         if (myPlayer) {
           const targetBlock = getTargetBlock(myPlayer);
@@ -462,7 +602,7 @@
         }
       }
 
-      if (e.key === "q") {
+      if (e.key === "q" && document.activeElement !== chatInputElement && document.activeElement !== letterInputElement) {
         const myPlayer = players.get(myId);
         if (myPlayer) {
           const targetBlock = getTargetBlock(myPlayer);
@@ -474,27 +614,74 @@
         }
       }
 
-      if (e.key === "t" && document.activeElement !== chatInputElement) {
+      if (e.key === "r" && letterReadingUIElement.style.display !== "block" && document.activeElement !== chatInputElement && document.activeElement !== letterInputElement) {
+        const myPlayer = players.get(myId);
+        if (myPlayer) {
+          const targetBlock = getTargetBlock(myPlayer);
+          ws.send(JSON.stringify({
+            type: 'read',
+            blockX: targetBlock.x,
+            blockY: targetBlock.y
+          }));
+        }
+      }
+
+      if (e.key === "t" && document.activeElement !== chatInputElement && document.activeElement !== letterInputElement) {
         e.preventDefault();
         chatInputElement.style.display = "block";
         chatInputElement.focus();
         keys.delete(e.key);
       }
 
-      if (e.key === "Enter") {
-        if (chatInputElement.style.display == "block") {
-          const message = chatInputElement.value;
-          chatInputElement.style.display = "none";
-          if (message) {
-            chatInputElement.value = "";
+      if (e.key === "Enter" && document.activeElement === chatInputElement) {
+        const message = chatInputElement.value;
+        chatInputElement.style.display = "none";
+        if (message) {
+          // Send message to server
+          ws.send(JSON.stringify({
+            type: 'chat',
+            id: myId,
+            message,
+          }));
+          chatInputElement.value = "";
+        }
+      }
 
-            ws.send(JSON.stringify({
-              type: 'chat',
-              id: myId,
-              message,
-            }));
+      if (e.key === "l" && document.activeElement !== letterInputElement && document.activeElement !== chatInputElement) {
+        e.preventDefault();
+        const myPlayer = players.get(myId);
+        if (myPlayer) {
+          const targetBlock = getTargetBlock(myPlayer);
+          // Only allow placing letters on empty spaces
+          if (terrain[targetBlock.y]?.[targetBlock.x] === BLOCK_TYPE.EMPTY) {
+            letterUIElement.style.display = "block";
+            letterInputElement.focus();
           }
         }
+      }
+
+      if (e.key === "Enter" && !e.shiftKey && document.activeElement === letterInputElement) {
+        e.preventDefault();
+        const letter = letterInputElement.value;
+        if (letter) {
+          const myPlayer = players.get(myId);
+          const targetBlock = getTargetBlock(myPlayer);
+          
+          // Send letter to server
+          ws.send(JSON.stringify({
+            type: 'placeLetter',
+            message: letter,
+            x: targetBlock.x,
+            y: targetBlock.y
+          }));
+        }
+        letterInputElement.value = "";
+        letterUIElement.style.display = "none";
+      }
+
+      if (e.key === "Escape" && document.activeElement === letterInputElement) {
+        letterInputElement.value = "";
+        letterUIElement.style.display = "none";
       }
     });
     window.addEventListener('keyup', (e) => keys.delete(e.key));
@@ -621,6 +808,8 @@
                 }
             } else if (block === BLOCK_TYPE.EMPTY_WITH_BANANA) {
               drawBananaSprite(ctx, screenX, screenY);
+            } else if (block === BLOCK_TYPE.EMPTY_WITH_ENVELOPE) {
+              drawEnvelopeSprite(ctx, screenX, screenY);
             } else {
               // Get pattern based on block type
               const pattern = patterns[block];
