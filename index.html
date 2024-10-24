@@ -2,6 +2,7 @@
 <html lang="en">
 <head>
   <title>monkey miner!</title>
+  <link rel="icon" type="image/x-icon" href="favicon.ico"/>
   <style>
     body {
       margin: 0;
@@ -51,6 +52,29 @@
         border: 2px solid #666;
         background: rgba(0, 0, 0, 0.4);
     }
+    #chatInput {
+      position: fixed;
+      bottom: 100px;
+      left: 50%;
+      transform: translateX(-50%);
+      width: 300px;
+      padding: 8px 12px;
+      color: white;
+      font-family: monospace;
+      background: rgba(0, 0, 0, 0.5);
+      border-radius: 5px;
+      border: 2px solid #666;
+      font-size: 14px;
+      outline: none;
+      display: none;
+    }
+    #chatInput::placeholder {
+      color: rgba(255, 255, 255, 0.5);
+    }
+    #chatInput:focus {
+      border-color: #888;
+      background: rgba(0, 0, 0, 0.7);
+    }
   </style>
 </head>
 <body>
@@ -66,13 +90,15 @@
   <div id="controls">
     Arrow keys to move<br>
     Space to mine the highlighted block<br>
-    Q to pick up a highlighted banana
+    Q to pick up a highlighted banana<br>
+    T to send a chat message
   </div>
   <div id="topScores">
     Top Scores:<br>
     <span id="scores"></span>
   </div>
   <canvas id="inventorySlot" width="48" height="48"></canvas>
+  <input type="text" id="chatInput" placeholder="Press Enter to chat..." maxlength="100">
 
   <script type="module">
     import { drawMonkeySprite } from './monkey.js';
@@ -86,6 +112,7 @@
     const scoreElement = document.getElementById('score');
     const topScoresElement = document.getElementById('scores');
     const monkeyIdElement = document.getElementById('monkeyId');
+    const chatInputElement = document.getElementById('chatInput');
 
     function resizeCanvas() {
       canvas.width = window.innerWidth;
@@ -102,6 +129,7 @@
     let viewportY = 0;
     let terrain = [];
     let zones = new Map();
+    let messages = new Map();
     let animationFrame = 0;
     let lastAnimationUpdate = 0;
     const ANIMATION_SPEED = 150;
@@ -281,9 +309,57 @@
 
     createZonePatterns();
 
+    function drawChatBubble(ctx, x, y, message) {
+      const padding = 8;
+      const borderRadius = 8;
+      
+      // Measure text for bubble size
+      ctx.font = '14px monospace';
+      const textMetrics = ctx.measureText(message);
+      const textWidth = textMetrics.width;
+      const textHeight = 14; // Approximate height for monospace font
+      
+      // Bubble dimensions
+      const bubbleWidth = textWidth + (padding * 2);
+      const bubbleHeight = textHeight + (padding * 2);
+      const triangleHeight = 8;
+      
+      // Position bubble above monkey
+      const bubbleX = x - (bubbleWidth / 2);
+      const bubbleY = y - bubbleHeight - GRID_SIZE - triangleHeight;
+      
+      // Draw bubble background
+      ctx.fillStyle = 'rgba(0, 0, 0, 0.7)';
+      ctx.beginPath();
+      // Draw rounded rectangle
+      ctx.moveTo(bubbleX + borderRadius, bubbleY);
+      ctx.lineTo(bubbleX + bubbleWidth - borderRadius, bubbleY);
+      ctx.quadraticCurveTo(bubbleX + bubbleWidth, bubbleY, bubbleX + bubbleWidth, bubbleY + borderRadius);
+      ctx.lineTo(bubbleX + bubbleWidth, bubbleY + bubbleHeight - borderRadius);
+      ctx.quadraticCurveTo(bubbleX + bubbleWidth, bubbleY + bubbleHeight, bubbleX + bubbleWidth - borderRadius, bubbleY + bubbleHeight);
+      ctx.lineTo(bubbleX + borderRadius, bubbleY + bubbleHeight);
+      ctx.quadraticCurveTo(bubbleX, bubbleY + bubbleHeight, bubbleX, bubbleY + bubbleHeight - borderRadius);
+      ctx.lineTo(bubbleX, bubbleY + borderRadius);
+      ctx.quadraticCurveTo(bubbleX, bubbleY, bubbleX + borderRadius, bubbleY);
+      ctx.closePath();
+      ctx.fill();
+      
+      // Draw triangle
+      ctx.beginPath();
+      ctx.moveTo(x - 8, bubbleY + bubbleHeight);
+      ctx.lineTo(x + 8, bubbleY + bubbleHeight);
+      ctx.lineTo(x, bubbleY + bubbleHeight + triangleHeight);
+      ctx.closePath();
+      ctx.fill();
+      
+      // Draw text
+      ctx.fillStyle = 'white';
+      ctx.fillText(message, bubbleX + padding, bubbleY + padding + textHeight);
+  }
+
     // SET UP WEBSOCKET
     // 13.59.50.220
-    const ws = new WebSocket('ws://localhost:3000');
+    const ws = new WebSocket('ws://13.59.50.220:3000');
 
     ws.onmessage = (event) => {
       const data = JSON.parse(event.data);
@@ -303,7 +379,12 @@
             viewportX = myPlayer.x - canvas.width / 2;
             viewportY = myPlayer.y - canvas.height / 2;
           }
-
+          data.messages.forEach(msg => {
+            messages.set(msg.key, {
+              message: msg.message,
+              expiration: msg.expiration
+            })
+          })
           monkeyIdElement.textContent = "monkey_" + myPlayer.id;
           break;
 
@@ -340,6 +421,12 @@
         case 'zoneUpdate':
           zones.set(data.key, data.zone);
           break;
+
+        case 'chatUpdate':
+          messages.set(data.id, {
+            message: data.message,
+            expiration: data.expiration
+          })
       }
     };
 
@@ -384,6 +471,29 @@
             blockX: targetBlock.x,
             blockY: targetBlock.y
           }));
+        }
+      }
+
+      if (e.key === "t" && document.activeElement !== chatInputElement) {
+        e.preventDefault();
+        chatInputElement.style.display = "block";
+        chatInputElement.focus();
+        keys.delete(e.key);
+      }
+
+      if (e.key === "Enter") {
+        if (chatInputElement.style.display == "block") {
+          const message = chatInputElement.value;
+          chatInputElement.style.display = "none";
+          if (message) {
+            chatInputElement.value = "";
+
+            ws.send(JSON.stringify({
+              type: 'chat',
+              id: myId,
+              message,
+            }));
+          }
         }
       }
     });
@@ -556,6 +666,20 @@
           ctx.strokeRect(screenX, screenY, GRID_SIZE, GRID_SIZE);
         }
       });
+
+      const currentTime = Date.now()
+      messages.forEach((msg, id) => {
+        if (msg.expiration < currentTime) {
+          messages.delete(id);
+        } else {
+          const player = players.get(id);
+          if (player) {
+            const screenX = player.x - viewportX;
+            const screenY = player.y - viewportY;
+            drawChatBubble(ctx, screenX, screenY, msg.message)
+          }
+        }
+      })
 
       const inventoryCanvas = document.getElementById('inventorySlot');
       const inventoryCtx = inventoryCanvas.getContext('2d');

@@ -33,6 +33,16 @@ const server = http.createServer((req, res) => {
         res.end(data);
       }
     });
+  } else if (req.url === '/favicon.ico') {
+    fs.readFile('./favicon.ico', (err, data) => {
+      if (err) {
+        res.writeHead(404);
+        res.end('File not found');
+      } else {
+        res.writeHead(200, { 'Content-Type': 'image/x-icon' });
+        res.end(data);
+      }
+    });
   }
 });
 
@@ -157,6 +167,8 @@ function isInZone(blockX, blockY) {
 // Store player positions and colors
 const players = new Map();
 
+const messages = new Map();
+
 function generateColor() {
   return '#' + Math.floor(Math.random()*16777215).toString(16);
 }
@@ -186,6 +198,10 @@ wss.on('connection', (ws) => {
       ...zone,
       currentMonkeys: Array.from(zone.currentMonkeys)
     })),
+    messages: Array.from(messages.entries()).map(([key, msg]) => ({
+      key,
+      ...msg
+    })),
     gridSize: GRID_SIZE
   }));
 
@@ -201,7 +217,6 @@ wss.on('connection', (ws) => {
   });
 
   ws.on('message', (message) => {
-
     let data = {};
     try {
         data = JSON.parse(message);
@@ -375,6 +390,24 @@ wss.on('connection', (ws) => {
           value: player.inventory
         }));
       }
+    } else if (data.type = 'chat') {
+      const current_timestamp = Date.now()
+      const expiration = current_timestamp + 5 * 1000 // 5 seconds
+      messages.set(data.id, {
+        message: data.message,
+        expiration,
+      })
+
+      wss.clients.forEach(client => {
+        if (client.readyState === WebSocket.OPEN) {
+          client.send(JSON.stringify({
+            type: 'chatUpdate',
+            id: data.id,
+            message: data.message,
+            expiration,
+          }));
+        }
+      });
     }
   });
 
