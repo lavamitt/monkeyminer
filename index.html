@@ -247,6 +247,8 @@
     let animationFrame = 0;
     let lastAnimationUpdate = 0;
     const ANIMATION_SPEED = 150;
+    let lastFrameTime = 0;
+    const BASE_SPEED = 360;
 
     const BLOCK_TYPE = Object.freeze({
       EMPTY: 0,
@@ -474,7 +476,7 @@
 
     // SET UP WEBSOCKET
     // 13.59.50.220
-    const ws = new WebSocket('ws://localhost:3000');
+    const ws = new WebSocket('ws://13.59.50.220:3000');
 
     ws.onmessage = (event) => {
       const data = JSON.parse(event.data);
@@ -675,6 +677,9 @@
     window.addEventListener('keyup', (e) => keys.delete(e.key));
 
     function gameLoop(timestamp) {
+      const deltaTime = (timestamp - lastFrameTime) / 1000;
+      lastFrameTime = timestamp;
+
       if (timestamp - lastAnimationUpdate > ANIMATION_SPEED) {
         animationFrame = (animationFrame + 1) % 2;
         lastAnimationUpdate = timestamp;
@@ -687,7 +692,7 @@
 
       const myPlayer = players.get(myId);
       if (myPlayer) {
-        const speed = 6;
+        const speed = BASE_SPEED * deltaTime;
         let newX = myPlayer.x;
         let newY = myPlayer.y;
         let moved = false;
@@ -893,6 +898,7 @@
       requestAnimationFrame(gameLoop);
     }
 
+    lastFrameTime = performance.now();
     gameLoop();
   </script>
 </body>
