@@ -201,7 +201,18 @@ wss.on('connection', (ws) => {
   });
 
   ws.on('message', (message) => {
-    const data = JSON.parse(message);
+
+    let data = {};
+    try {
+        data = JSON.parse(message);
+    } catch (error) {
+        console.error(`Invalid JSON received from client ${clientId}:`, error);
+        ws.send(JSON.stringify({
+            type: 'error',
+           message: 'Invalid message format'
+        }));
+        return;
+    }
     
     if (data.type === 'move') {
       const player = players.get(clientId);
