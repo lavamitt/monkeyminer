@@ -4,7 +4,7 @@ const fs = require('fs');
 
 const server = http.createServer((req, res) => {
   if (req.url === '/') {
-    fs.readFile('index.html', (err, data) => {
+    fs.readFile('./client/index.html', (err, data) => {
       if (err) {
         res.writeHead(500);
         res.end('Error loading index.html');

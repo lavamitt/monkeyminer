@@ -41,11 +41,23 @@ export class HeadsUpDisplay {
         this.elements.chatInput.focus();
     }
 
-    clearChatAndReturnMessage() {
-        const message = this.hud.elements.chatInput.value;
-        this.hud.elements.chatInput.style.display = "none";
-        this.hud.elements.chatInput.value = "";
+    hideChatAndReturnMessage() {
+        const message = this.elements.chatInput.value;
+        this.elements.chatInput.style.display = "none";
+        this.elements.chatInput.value = "";
         return message;
+    }
+
+    displayLetterInput() {
+        this.elements.letterWritingUI.style.display = "block";
+        this.elements.letterInput.focus();
+    }
+
+    hideLetterAndReturnMessage() {
+        const letter = this.elements.letterInput.value;
+        this.elements.letterReadingUI.style.display = "none";
+        this.elements.letterInput.value = "";
+        return letter;
     }
 
     displayLetter(author, date, message) {
@@ -54,12 +66,4 @@ export class HeadsUpDisplay {
         this.elements.letterText.textContent = message;
         this.elements.letterReadingUI.style.display = 'block'
     }
-
-
-
-
-
-
-
-
 }

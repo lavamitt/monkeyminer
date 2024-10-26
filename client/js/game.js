@@ -158,17 +158,20 @@ export class Game {
         }
     }
 
-    handleKeyDown(key) {
+    handleKeyDownEvent(event) {
         // If chat or letter input is focused, don't handle game controls
         // if (document.activeElement.tagName === 'INPUT' || 
         //     document.activeElement.tagName === 'TEXTAREA') {
         //     return;
         // }
+
         const activeElementIsChatInput = document.activeElement === this.hud.elements.chatInput
         const activeElementIsLetterInput = document.activeElement === this.hud.elements.letterInput
 
         const player = this.players.get(this.myId);
         if (!player) return;
+
+        const key = event.key;
 
         switch (key) {
             case ' ':
@@ -181,11 +184,6 @@ export class Game {
                     this.handlePickup(player);
                 }
                 break;
-            case 'r':
-                if (!activeElementIsChatInput && !activeElementIsLetterInput) {
-                    this.handleReadLetter(player);
-                }
-                break;
             case 't':
                 if (!activeElementIsChatInput && !activeElementIsLetterInput) {
                     e.preventDefault();
@@ -193,15 +191,30 @@ export class Game {
                     // keys delete key??
                 }
                 break;
-            case 'Enter':
-                if (activeElementIsChatInput) {
-                    this.handleChatInput(player)
-                }
             case 'l':
                 if (!activeElementIsChatInput && !activeElementIsLetterInput) {
                     e.preventDefault();
-                    this.handlePlacingLetter(player)
+                    this.handleNewLetter(player)
                 }
+                break;
+            case 'r':
+                if (!activeElementIsChatInput && !activeElementIsLetterInput) {
+                    this.handleReadLetter(player);
+                }
+                break;
+            case 'Enter':
+                if (activeElementIsChatInput) {
+                    this.handleChatInput(player)
+                } else if (activeElementIsLetterInput && !e.shiftKey) {
+                    e.preventDefault();
+                    this.handleLetterInput(player);
+                }
+                break;
+            case 'Escape': 
+                if (activeElementIsLetterInput) {
+                    this.hud.hideLetterAndReturnMessage()
+                }
+                break;
         }
     }
 
@@ -221,6 +234,13 @@ export class Game {
             blockX: targetBlock.x,
             blockY: targetBlock.y
         }));
+    }
+
+    handleNewLetter(player) {
+        const targetBlock = this.getTargetBlock(player);
+        if (terrain[targetBlock.y]?.[targetBlock.x] === BLOCK_TYPE.EMPTY) {
+            this.hud.displayLetterInput()
+        }
     }
 
     handleReadLetter(player) {
@@ -243,15 +263,16 @@ export class Game {
         }
     }
 
-    handlePlacingLetter(player) {
-        
+    handleLetterInput(player) {
+        const letter = this.hud.hideLetterAndReturnMessage()
+        if (letter) {
+            const targetBlock = getTargetBlock(player);
+            ws.send(JSON.stringify({
+                type: 'placeLetter',
+                message: letter,
+                blockX: targetBlock.x,
+                blockY: targetBlock.y
+              }));
+        }
     }
-
-
-
-
-
-
-
-
 }
