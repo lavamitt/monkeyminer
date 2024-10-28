@@ -1,4 +1,4 @@
-import { WebSocket } from 'ws';
+import WebSocket, { WebSocketServer } from 'ws';
 import { createServer } from 'http';
 import { readFile } from 'fs';
 import {
@@ -127,7 +127,7 @@ const server = createServer((req, res) => {
   }
 });
 
-const wss = new WebSocket.Server({ server });
+const wss = new WebSocketServer({ server });
 
 const terrain = new Array(WORLD_SIZE).fill(null)
   .map(() => new Array(WORLD_SIZE).fill(BLOCK_TYPE.DIRT));
@@ -151,6 +151,8 @@ for (let y = 0; y < WORLD_SIZE; y++) {
     }
   }
 }
+
+const zones = new Map();
 
 function tooCloseToNearestZone(x, y) {
   for (let [_, zone] of zones) {
@@ -387,7 +389,8 @@ wss.on('connection', (ws) => {
           blockY >= 0 && blockY < WORLD_SIZE &&
           terrain[blockY][blockX] !== BLOCK_TYPE.EMPTY &&
           terrain[blockY][blockX] !== BLOCK_TYPE.EMPTY_WITH_BANANA &&
-          terrain[blockY][blockX] !== BLOCK_TYPE.ZONE) {
+          terrain[blockY][blockX] !== BLOCK_TYPE.ZONE &&
+          terrain[blockY][blockX] !== BLOCK_TYPE.EMPTY_WITH_ENVELOPE) {
         if (terrain[blockY][blockX] == BLOCK_TYPE.ORE) {
           player.score += GAME_RULES.MINE_ORE_SCORE;
         }
