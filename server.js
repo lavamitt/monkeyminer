@@ -319,12 +319,10 @@ wss.on('connection', (ws) => {
                   
                   zone.currentMonkeys.forEach(playerId => {
                       const zonePlayer = players.get(playerId);
-                      console.log(zonePlayer);
                       if (zonePlayer) {
                           zonePlayer.score += GAME_RULES.ZONE_COMPLETION_BASE_SCORE * zone.currentMonkeys.size;
                           zonePlayer.inventory.pop();  // Remove banana
                       }
-                      console.log(zonePlayer);
 
                       wss.clients.forEach(client => {
                         if (client.readyState === WebSocket.OPEN) {

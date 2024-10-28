@@ -249,7 +249,6 @@ export class Game {
 
     handleNewLetter(player) {
         const targetBlock = Game.getTargetBlock(player);
-        console.log(targetBlock)
         if (this.terrain[targetBlock.y]?.[targetBlock.x] === BLOCK_TYPE.EMPTY) {
             this.hud.displayLetterInput()
         }
