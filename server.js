@@ -1,10 +1,28 @@
-const WebSocket = require('ws');
-const http = require('http');
-const fs = require('fs');
+import { WebSocket } from 'ws';
+import { createServer } from 'http';
+import { readFile } from 'fs';
+import {
+  GRID_SIZE,
+  WORLD_SIZE,
+  START_AREA_SIZE,
+  BLOCK_TYPE,
+  NUM_ZONES,
+  MIN_DISTANCE_BETWEEN_ZONES,
+  MIN_ZONE_SIDE,
+  MAX_ZONE_SIDE,
+  MIN_REQUIRED_MONKEYS,
+  MAX_REQUIRED_MONKEYS,
+  ORE_SPAWN_CHANCE,
+  CHAT_MESSAGE_DURATION,
+  WEBSOCKET_SERVER_TO_CLIENT_EVENTS,
+  WEBSOCKET_CLIENT_TO_SERVER_EVENTS,
+  GAME_RULES,
+  DIRECTIONS
+}  from './shared/constants.js';
 
-const server = http.createServer((req, res) => {
+const server = createServer((req, res) => {
   if (req.url === '/') {
-    fs.readFile('./client/index.html', (err, data) => {
+    readFile('./client/index.html', (err, data) => {
       if (err) {
         res.writeHead(500);
         res.end('Error loading index.html');
@@ -14,7 +32,7 @@ const server = http.createServer((req, res) => {
       }
     });
    } else if (req.url === '/styles/main.css') {
-      fs.readFile('./client/styles/main.css', (err, data) => {
+      readFile('./client/styles/main.css', (err, data) => {
         if (err) {
           res.writeHead(404);
           res.end('File not found');
@@ -24,7 +42,7 @@ const server = http.createServer((req, res) => {
         }
       });
   } else if (req.url === '/js/game.js') {
-    fs.readFile('./client/js/game.js', (err, data) => {
+    readFile('./client/js/game.js', (err, data) => {
       if (err) {
         res.writeHead(404);
         res.end('File not found');
@@ -34,7 +52,7 @@ const server = http.createServer((req, res) => {
       }
     });
   } else if (req.url === '/js/hud.js') {
-    fs.readFile('./client/js/hud.js', (err, data) => {
+    readFile('./client/js/hud.js', (err, data) => {
       if (err) {
         res.writeHead(404);
         res.end('File not found');
@@ -44,7 +62,7 @@ const server = http.createServer((req, res) => {
       }
     });
   } else if (req.url === '/js/renderer.js') {
-    fs.readFile('./client/js/renderer.js', (err, data) => {
+    readFile('./client/js/renderer.js', (err, data) => {
       if (err) {
         res.writeHead(404);
         res.end('File not found');
@@ -54,7 +72,7 @@ const server = http.createServer((req, res) => {
       }
     });
   } else if (req.url === '/shared/constants.js') {
-    fs.readFile('./shared/constants.js', (err, data) => {
+    readFile('./shared/constants.js', (err, data) => {
       if (err) {
         res.writeHead(404);
         res.end('File not found');
@@ -64,7 +82,7 @@ const server = http.createServer((req, res) => {
       }
     });
   } else if (req.url === '/sprites/monkey.js') {
-    fs.readFile('./client/sprites/monkey.js', (err, data) => {
+    readFile('./client/sprites/monkey.js', (err, data) => {
       if (err) {
         res.writeHead(404);
         res.end('File not found');
@@ -74,7 +92,7 @@ const server = http.createServer((req, res) => {
       }
     });
   } else if (req.url === '/sprites/banana.js') {
-    fs.readFile('./client/sprites/banana.js', (err, data) => {
+    readFile('./client/sprites/banana.js', (err, data) => {
       if (err) {
         res.writeHead(404);
         res.end('File not found');
@@ -84,7 +102,7 @@ const server = http.createServer((req, res) => {
       }
     });
   } else if (req.url === '/sprites/envelope.js') {
-    fs.readFile('./client/sprites/envelope.js', (err, data) => {
+    readFile('./client/sprites/envelope.js', (err, data) => {
       if (err) {
         res.writeHead(404);
         res.end('File not found');
@@ -94,7 +112,7 @@ const server = http.createServer((req, res) => {
       }
     });
   } else if (req.url === '/favicon.ico') {
-    fs.readFile('./favicon.ico', (err, data) => {
+    readFile('./favicon.ico', (err, data) => {
       if (err) {
         res.writeHead(404);
         res.end('File not found');
@@ -110,20 +128,6 @@ const server = http.createServer((req, res) => {
 });
 
 const wss = new WebSocket.Server({ server });
-
-// Game constants
-const GRID_SIZE = 32; // Size of each terrain block
-const WORLD_SIZE = 1000; // World size in blocks
-const START_AREA_SIZE = 10; // Size of starting area in blocks
-
-const BLOCK_TYPE = Object.freeze({
-  EMPTY: 0,
-  DIRT: 1,
-  ORE: 2,
-  EMPTY_WITH_BANANA: 3,
-  EMPTY_WITH_ENVELOPE: 4,
-  ZONE: 5
-});
 
 const terrain = new Array(WORLD_SIZE).fill(null)
   .map(() => new Array(WORLD_SIZE).fill(BLOCK_TYPE.DIRT));
@@ -141,21 +145,12 @@ for (let y = startY; y < startY + START_AREA_SIZE; y++) {
 for (let y = 0; y < WORLD_SIZE; y++) {
   for (let x = 0; x < WORLD_SIZE; x++) {
     if (terrain[y][x] !== BLOCK_TYPE.EMPTY) {
-      if (Math.random() < 0.1) {
+      if (Math.random() < ORE_SPAWN_CHANCE) {
         terrain[y][x] = BLOCK_TYPE.ORE;
       }
     }
   }
 }
-
-// Add zones
-const zones = new Map();
-const NUM_ZONES = 1000;
-const MIN_DISTANCE_BETWEEN_ZONES = 10;
-const MIN_ZONE_SIDE = 1;
-const MAX_ZONE_SIDE = 10;
-const MIN_REQUIRED_MONKEYS = 1;
-const MAX_REQUIRED_MONKEYS = 15;
 
 function tooCloseToNearestZone(x, y) {
   for (let [_, zone] of zones) {
@@ -246,14 +241,14 @@ wss.on('connection', (ws) => {
     x: (startX + START_AREA_SIZE/2) * GRID_SIZE,
     y: (startY + START_AREA_SIZE/2) * GRID_SIZE,
     color: generateColor(),
-    direction: 'right', // default direction
+    direction: DIRECTIONS.RIGHT, // default direction
     score: 0,
     inventory: []
   });
 
   // Send client their ID, initial state, and terrain
   ws.send(JSON.stringify({
-    type: 'init',
+    type: WEBSOCKET_SERVER_TO_CLIENT_EVENTS.INIT,
     id: clientId,
     players: Array.from(players.entries()).map(([_, data]) => data),
     terrain: terrain,
@@ -273,7 +268,7 @@ wss.on('connection', (ws) => {
   wss.clients.forEach(client => {
     if (client !== ws && client.readyState === WebSocket.OPEN) {
       client.send(JSON.stringify({
-        type: 'playerJoin',
+        type: WEBSOCKET_SERVER_TO_CLIENT_EVENTS.PLAYER_JOIN,
         id: clientId,
         player: players.get(clientId),
       }));
@@ -293,7 +288,7 @@ wss.on('connection', (ws) => {
         return;
     }
     
-    if (data.type === 'move') {
+    if (data.type === WEBSOCKET_CLIENT_TO_SERVER_EVENTS.MOVE) {
       const player = players.get(clientId);
       if (player) {
         player.x = data.x;
@@ -303,7 +298,7 @@ wss.on('connection', (ws) => {
         wss.clients.forEach(client => {
           if (client.readyState === WebSocket.OPEN) {
             client.send(JSON.stringify({
-              type: 'playerMove',
+              type: WEBSOCKET_SERVER_TO_CLIENT_EVENTS.PLAYER_MOVE,
               id: clientId,
               x: player.x,
               y: player.y,
@@ -321,16 +316,12 @@ wss.on('connection', (ws) => {
                 zone.currentMonkeys.add(clientId);
                 if (zone.currentMonkeys.size >= zone.requiredMonkeys) {
                   zone.completed = true;
-
-                  console.log("COMPLETED!");
-                  console.log(zone.currentMonkeys);
                   
                   zone.currentMonkeys.forEach(playerId => {
-                      console.log("SENDING UPDATES FOR SCORES");
                       const zonePlayer = players.get(playerId);
                       console.log(zonePlayer);
                       if (zonePlayer) {
-                          zonePlayer.score += 10 * zone.currentMonkeys.size;
+                          zonePlayer.score += GAME_RULES.ZONE_COMPLETION_BASE_SCORE * zone.currentMonkeys.size;
                           zonePlayer.inventory.pop();  // Remove banana
                       }
                       console.log(zonePlayer);
@@ -338,7 +329,7 @@ wss.on('connection', (ws) => {
                       wss.clients.forEach(client => {
                         if (client.readyState === WebSocket.OPEN) {
                           client.send(JSON.stringify({
-                              type: 'scoreUpdate',
+                              type: WEBSOCKET_SERVER_TO_CLIENT_EVENTS.SCORE_UPDATE,
                               id: zonePlayer.id,
                               value: zonePlayer.score,
                             }))
@@ -347,7 +338,7 @@ wss.on('connection', (ws) => {
                       wss.clients.forEach(client => {
                         if (client.readyState === WebSocket.OPEN) {
                           client.send(JSON.stringify({
-                            type: 'inventoryUpdate',
+                            type: WEBSOCKET_SERVER_TO_CLIENT_EVENTS.INVENTORY_UPDATE,
                             id: zonePlayer.id,
                             value: zonePlayer.inventory,
                             }))
@@ -357,7 +348,7 @@ wss.on('connection', (ws) => {
                 wss.clients.forEach(client => {
                   if (client.readyState === WebSocket.OPEN) {
                       client.send(JSON.stringify({
-                          type: 'zoneUpdate',
+                          type: WEBSOCKET_SERVER_TO_CLIENT_EVENTS.ZONE_UPDATE,
                           key: zoneKey,
                           zone: {
                             ...zone,
@@ -375,7 +366,7 @@ wss.on('connection', (ws) => {
                    wss.clients.forEach(client => {
                     if (client.readyState === WebSocket.OPEN) {
                         client.send(JSON.stringify({
-                            type: 'zoneUpdate',
+                            type: WEBSOCKET_SERVER_TO_CLIENT_EVENTS.ZONE_UPDATE,
                             key: zoneKey,
                             zone: {
                               ...zone,
@@ -388,7 +379,7 @@ wss.on('connection', (ws) => {
             }
         }
       }
-    } else if (data.type === 'mine') {
+    } else if (data.type === WEBSOCKET_CLIENT_TO_SERVER_EVENTS.MINE) {
       const player = players.get(clientId);
 
       const blockX = data.blockX;
@@ -400,10 +391,10 @@ wss.on('connection', (ws) => {
           terrain[blockY][blockX] !== BLOCK_TYPE.EMPTY_WITH_BANANA &&
           terrain[blockY][blockX] !== BLOCK_TYPE.ZONE) {
         if (terrain[blockY][blockX] == BLOCK_TYPE.ORE) {
-          player.score += 1;
+          player.score += GAME_RULES.MINE_ORE_SCORE;
         }
 
-        if (Math.random() < 0.05) {
+        if (Math.random() < GAME_RULES.BANANA_SPAWN_CHANCE) {
           terrain[blockY][blockX] = BLOCK_TYPE.EMPTY_WITH_BANANA;
         } else {
           terrain[blockY][blockX] = BLOCK_TYPE.EMPTY;
@@ -412,7 +403,7 @@ wss.on('connection', (ws) => {
         wss.clients.forEach(client => {
           if (client.readyState === WebSocket.OPEN) {
             client.send(JSON.stringify({
-              type: 'terrainUpdate',
+              type: WEBSOCKET_SERVER_TO_CLIENT_EVENTS.TERRAIN_UPDATE,
               x: blockX,
               y: blockY,
               value: terrain[blockY][blockX]
@@ -423,13 +414,13 @@ wss.on('connection', (ws) => {
         wss.clients.forEach(client => {
           if (client.readyState === WebSocket.OPEN) {
             client.send(JSON.stringify({
-              type: 'scoreUpdate',
+              type: WEBSOCKET_SERVER_TO_CLIENT_EVENTS.SCORE_UPDATE,
                 id: clientId,
                 value: player.score,
               }))
           }});
       }
-    } else if (data.type == 'pickup') {
+    } else if (data.type == WEBSOCKET_CLIENT_TO_SERVER_EVENTS.PICKUP) {
       const player = players.get(clientId);
       const blockX = data.blockX;
       const blockY = data.blockY;
@@ -440,7 +431,7 @@ wss.on('connection', (ws) => {
         wss.clients.forEach(client => {
           if (client.readyState === WebSocket.OPEN) {
             client.send(JSON.stringify({
-              type: 'terrainUpdate',
+              type: WEBSOCKET_SERVER_TO_CLIENT_EVENTS.TERRAIN_UPDATE,
               x: blockX,
               y: blockY,
               value: terrain[blockY][blockX]
@@ -449,14 +440,14 @@ wss.on('connection', (ws) => {
         });
 
         ws.send(JSON.stringify({
-          type: 'inventoryUpdate',
+          type: WEBSOCKET_SERVER_TO_CLIENT_EVENTS.INVENTORY_UPDATE,
           id: clientId,
           value: player.inventory
         }));
       }
-    } else if (data.type == 'chat') {
-      const current_timestamp = Date.now()
-      const expiration = current_timestamp + 5 * 1000 // 5 seconds
+    } else if (data.type == WEBSOCKET_CLIENT_TO_SERVER_EVENTS.CHAT) {
+      const current_timestamp = Date.now();
+      const expiration = current_timestamp + CHAT_MESSAGE_DURATION;
       messages.set(data.id, {
         message: data.message,
         expiration,
@@ -465,14 +456,14 @@ wss.on('connection', (ws) => {
       wss.clients.forEach(client => {
         if (client.readyState === WebSocket.OPEN) {
           client.send(JSON.stringify({
-            type: 'chatUpdate',
+            type: WEBSOCKET_SERVER_TO_CLIENT_EVENTS.CHAT_UPDATE,
             id: data.id,
             message: data.message,
             expiration,
           }));
         }
       });
-    } else if (data.type == 'placeLetter') {
+    } else if (data.type == WEBSOCKET_CLIENT_TO_SERVER_EVENTS.PLACE_LETTER) {
       const blockX = data.blockX;
       const blockY = data.blockY;
       const letterKey = `${blockX},${blockY}`;
@@ -490,7 +481,7 @@ wss.on('connection', (ws) => {
         wss.clients.forEach(client => {
             if (client.readyState === WebSocket.OPEN) {
                 client.send(JSON.stringify({
-                    type: 'terrainUpdate',
+                    type: WEBSOCKET_SERVER_TO_CLIENT_EVENTS.TERRAIN_UPDATE,
                     x: blockX,
                     y: blockY,
                     value: terrain[blockY][blockX]
@@ -498,7 +489,7 @@ wss.on('connection', (ws) => {
             }
         });
       }
-    } else if (data.type == 'read') {
+    } else if (data.type == WEBSOCKET_CLIENT_TO_SERVER_EVENTS.READ) {
       const blockX = data.blockX;
       const blockY = data.blockY;
       if (terrain[blockY][blockX] === BLOCK_TYPE.EMPTY_WITH_ENVELOPE) {
@@ -506,7 +497,7 @@ wss.on('connection', (ws) => {
         const letter = letters.get(letterKey);
 
         ws.send(JSON.stringify({
-          type: 'letterToRead',
+          type: WEBSOCKET_SERVER_TO_CLIENT_EVENTS.LETTER_TO_READ,
           x: data.x,
           y: data.y,
           authorId: letter.authorId,
@@ -524,7 +515,7 @@ wss.on('connection', (ws) => {
          wss.clients.forEach(client => {
           if (client.readyState === WebSocket.OPEN) {
               client.send(JSON.stringify({
-                  type: 'zoneUpdate',
+                  type: WEBSOCKET_SERVER_TO_CLIENT_EVENTS.ZONE_UPDATE,
                   key: zoneKey,
                   zone: {
                     ...zone,
@@ -539,7 +530,7 @@ wss.on('connection', (ws) => {
     wss.clients.forEach(client => {
       if (client.readyState === WebSocket.OPEN) {
         client.send(JSON.stringify({
-          type: 'playerLeave',
+          type: WEBSOCKET_SERVER_TO_CLIENT_EVENTS.PLAYER_LEAVE,
           id: clientId
         }));
       }

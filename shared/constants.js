@@ -38,7 +38,7 @@ export const MAX_CHAT_LENGTH = 100;
 export const MAX_LETTER_LENGTH = 500;
 
 // WebSocket Events
-export const WEBSOCKET_EVENTS = Object.freeze({
+export const WEBSOCKET_SERVER_TO_CLIENT_EVENTS = Object.freeze({
     INIT: 'init',
     PLAYER_JOIN: 'playerJoin',
     PLAYER_LEAVE: 'playerLeave',
@@ -49,6 +49,15 @@ export const WEBSOCKET_EVENTS = Object.freeze({
     INVENTORY_UPDATE: 'inventoryUpdate',
     CHAT_UPDATE: 'chatUpdate',
     LETTER_TO_READ: 'letterToRead'
+});
+
+export const WEBSOCKET_CLIENT_TO_SERVER_EVENTS = Object.freeze({
+    MOVE: 'move',
+    MINE: 'mine',
+    PICKUP: 'pickup',
+    READ: 'read',
+    CHAT: 'chat',
+    PLACE_LETTER: 'placeLetter'
 });
 
 // Server Configuration
@@ -63,7 +72,7 @@ export const SERVER_CONFIG = Object.freeze({
 export const GAME_RULES = Object.freeze({
     MINE_ORE_SCORE: 1,
     ZONE_COMPLETION_BASE_SCORE: 10, // multiplied by number of monkeys
-    BANANA_SPAWN_CHANCE: 0.05
+    BANANA_SPAWN_CHANCE: 0.05,
 });
 
 // Directions
