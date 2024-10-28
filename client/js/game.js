@@ -1,5 +1,4 @@
-import { GRID_SIZE, BLOCK_TYPE, BASE_SPEED, ANIMATION_SPEED, ANIMATION_FRAMES, ZONE_ANIMATION_SPEED, ZONE_ANIMATION_FRAMES } from "./shared/constants.js"
-
+import { GRID_SIZE, BLOCK_TYPE, BASE_SPEED, ANIMATION_SPEED, ANIMATION_FRAMES, ZONE_ANIMATION_SPEED, ZONE_ANIMATION_FRAMES } from "../shared/constants.js"
 
 export class Game {
 
@@ -33,7 +32,7 @@ export class Game {
     }
 
     setupWebSocket() {
-        this.ws.onmessage(event => {
+        this.ws.onmessage = (event => {
             const data = JSON.parse(event.data);
             switch (data.type) {
                 case 'init':
@@ -90,21 +89,26 @@ export class Game {
         });
     
         this.hud.updateMonkeyId(this.myId);
+        this.hud.updateNumPlayers(this.players.size);
+        this.hud.updateScores(this.players, this.myId);
     }
 
     handlePlayerJoin(data) {
         this.players.set(data.id, data.player);
-        this.hud.updateNumPlayers(players.size);
+        this.hud.updateNumPlayers(this.players.size);
+        this.hud.updateScores(this.players, this.myId);
     }
 
     handlePlayerLeave(data) {
         this.players.delete(data.id)
+        this.hud.updateNumPlayers(this.players.size);
+        this.hud.updateScores(this.players, this.myId);
     }
 
     handlePlayerMove(data) {
         // we exclude the current player since we've already updated optimistically in the gameloop.
-        if (players.has(data.id) && data.id !== myId) {
-            const player = players.get(data.id);
+        if (this.players.has(data.id) && data.id !== this.myId) {
+            const player = this.players.get(data.id);
             player.x = data.x;
             player.y = data.y;
             player.direction = data.direction;
@@ -122,7 +126,7 @@ export class Game {
 
     handleScoreUpdate(data) {
         this.players.get(data.id).score = data.value
-        this.hud.updateScores(players, this.myId)
+        this.hud.updateScores(this.players, this.myId)
     }
 
     handleInventoryUpdate(data) {
@@ -137,7 +141,7 @@ export class Game {
     }
 
     handleLetterToRead(data) {
-        const author = players.get(data.authorId) ? `monkey_${data.authorId}` : 'Unknown Monkey';
+        const author = this.players.get(data.authorId) ? `monkey_${data.authorId}` : 'Unknown Monkey';
         const date = new Date(data.timestamp).toLocaleString();
         this.hud.displayLetter(author, date, data.message);
     }
@@ -233,8 +237,11 @@ export class Game {
     }
 
     handleNewLetter(player) {
+        console.log("HELLO");
         const targetBlock = Game.getTargetBlock(player);
-        if (terrain[targetBlock.y]?.[targetBlock.x] === BLOCK_TYPE.EMPTY) {
+        console.log(targetBlock)
+        if (this.terrain[targetBlock.y]?.[targetBlock.x] === BLOCK_TYPE.EMPTY) {
+            console.log("GOT INSIDE")
             this.hud.displayLetterInput()
         }
     }
@@ -284,12 +291,12 @@ export class Game {
 
     isWalkableArea(blockX, blockY) {
         return this.terrain[blockY]?.[blockX] == BLOCK_TYPE.EMPTY 
-            || terrain[blockY]?.[blockX] == BLOCK_TYPE.EMPTY_WITH_BANANA 
-            || terrain[blockY]?.[blockX] == BLOCK_TYPE.ZONE
+            || this.terrain[blockY]?.[blockX] == BLOCK_TYPE.EMPTY_WITH_BANANA 
+            || this.terrain[blockY]?.[blockX] == BLOCK_TYPE.ZONE
     }
 
     handlePlayerMovement(deltaTime, keys) {
-        const myPlayer = players.get(myId);
+        const myPlayer = this.players.get(this.myId);
         if (myPlayer) {
             const speed = BASE_SPEED * deltaTime;
             let newX = myPlayer.x;
@@ -330,8 +337,8 @@ export class Game {
                 myPlayer.moving = moved;
                 this.handleMovement(myPlayer)
     
-                viewportX = myPlayer.x - this.canvas.width / 2;
-                viewportY = myPlayer.y - this.canvas.height / 2;
+                this.viewportX = myPlayer.x - this.canvas.width / 2;
+                this.viewportY = myPlayer.y - this.canvas.height / 2;
             }
     
             myPlayer.moving = moved;
@@ -350,8 +357,8 @@ export class Game {
             this.lastAnimationUpdate = timestamp;
         }
     
-        if (timestamp - lastZoneAnimationUpdate > ZONE_ANIMATION_SPEED) {
-            this.currentZoneFrame = (currentZoneFrame + 1) % ZONE_ANIMATION_FRAMES;
+        if (timestamp - this.lastZoneAnimationUpdate > ZONE_ANIMATION_SPEED) {
+            this.currentZoneFrame = (this.currentZoneFrame + 1) % ZONE_ANIMATION_FRAMES;
             this.lastZoneAnimationUpdate = timestamp;
         }
 

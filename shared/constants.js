@@ -55,8 +55,9 @@ export const WEBSOCKET_EVENTS = Object.freeze({
 export const SERVER_CONFIG = Object.freeze({
     PORT: 3000,
     HOST: '13.59.50.220',
-    WS_URL: 'ws://13.59.50.220:3000'
-  });
+    WS_URL: 'ws://13.59.50.220:3000',
+    DEV_WS_URL: 'ws://localhost:3000'
+});
   
 // Game Rules & Scoring
 export const GAME_RULES = Object.freeze({

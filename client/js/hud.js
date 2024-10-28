@@ -55,7 +55,7 @@ export class HeadsUpDisplay {
 
     hideLetterAndReturnMessage() {
         const letter = this.elements.letterInput.value;
-        this.elements.letterReadingUI.style.display = "none";
+        this.elements.letterWritingUI.style.display = "none";
         this.elements.letterInput.value = "";
         return letter;
     }

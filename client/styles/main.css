@@ -69,7 +69,7 @@ body {
     border-color: #888;
     background: rgba(0, 0, 0, 0.7);
 }
-#letterUI {
+#letterWritingUI {
     position: fixed;
     top: 50%;
     left: 50%;

@@ -1,8 +1,8 @@
-import { GRID_SIZE, BLOCK_TYPE, ZONE_ANIMATION_FRAMES } from "./shared/constants.js"
-import { drawMonkeySprite } from './monkey.js';
-import { drawBananaSprite } from './banana.js';
-import { drawEnvelopeSprite } from './envelope.js';
-import { Game } from './js/game.js';
+import { GRID_SIZE, BLOCK_TYPE, ZONE_ANIMATION_FRAMES } from "../shared/constants.js"
+import { drawMonkeySprite } from '../sprites/monkey.js';
+import { drawBananaSprite } from '../sprites/banana.js';
+import { drawEnvelopeSprite } from '../sprites/envelope.js';
+import { Game } from './game.js';
 
 export class Renderer {
 
@@ -12,15 +12,15 @@ export class Renderer {
 
         // Create patterns for each block type
         this.patterns = {
-            [BLOCK_TYPE.DIRT]: createDirtPattern(),
-            [BLOCK_TYPE.ORE]: createOrePattern(),
+            [BLOCK_TYPE.DIRT]: this.createDirtPattern(),
+            [BLOCK_TYPE.ORE]: this.createOrePattern(),
         };
 
         this.zonePatternCache = {
             completed: new Array(ZONE_ANIMATION_FRAMES),
             incomplete: new Array(ZONE_ANIMATION_FRAMES)
         };
-        createZonePatterns()
+        this.createZonePatterns()
     }
 
     createDirtPattern() {
@@ -148,7 +148,7 @@ export class Renderer {
             }
         };
 
-        const patterns = {
+        const zonePatterns = {
             completed: {
               baseColor: '#2eb82e',
               lineColor: '#1a661a',
@@ -162,7 +162,7 @@ export class Renderer {
         };
 
         for (let frame = 0; frame < ZONE_ANIMATION_FRAMES; frame++) {
-            for (const [type, colors] of Object.entries(patterns)) {
+            for (const [type, colors] of Object.entries(zonePatterns)) {
               const canvas = createCanvas(GRID_SIZE);
               const context = canvas.getContext('2d');
               
@@ -178,7 +178,7 @@ export class Renderer {
                 ...colors
               });
               
-              this.zonePatternCache[type][frame] = ctx.createPattern(canvas, 'repeat');
+              this.zonePatternCache[type][frame] = this.ctx.createPattern(canvas, 'repeat');
             }
         }
     }
@@ -239,6 +239,7 @@ export class Renderer {
         const messages = game.messages;
         const viewportX = game.viewportX;
         const viewportY = game.viewportY;
+        const currentAnimationFrame = game.currentAnimationFrame;
         const currentZoneFrame = game.currentZoneFrame;
 
         const myPlayer = players.get(myId);
@@ -256,7 +257,7 @@ export class Renderer {
 
         // PLAYERS
         players.forEach((player, id) => {
-            this.renderPlayer(player, id === myId, viewportX, viewportY);
+            this.renderPlayer(player, id === myId, viewportX, viewportY, currentAnimationFrame);
         })
 
         // MESSAGES
@@ -332,18 +333,18 @@ export class Renderer {
                             }
                     }
                     } else if (block === BLOCK_TYPE.EMPTY_WITH_BANANA) {
-                        drawBananaSprite(ctx, screenX, screenY);
+                        drawBananaSprite(this.ctx, screenX, screenY);
                     } else if (block === BLOCK_TYPE.EMPTY_WITH_ENVELOPE) {
-                        drawEnvelopeSprite(ctx, screenX, screenY);
+                        drawEnvelopeSprite(this.ctx, screenX, screenY);
                     } else {
                         // Get pattern based on block type
-                        const pattern = patterns[block];
+                        const pattern = this.patterns[block];
                         if (pattern) {
-                            ctx.save();
-                            ctx.translate(screenX, screenY);
-                            ctx.fillStyle = pattern;
-                            ctx.fillRect(0, 0, GRID_SIZE, GRID_SIZE);
-                            ctx.restore();
+                            this.ctx.save();
+                            this.ctx.translate(screenX, screenY);
+                            this.ctx.fillStyle = pattern;
+                            this.ctx.fillRect(0, 0, GRID_SIZE, GRID_SIZE);
+                            this.ctx.restore();
                         }
                     }
                 }
@@ -361,19 +362,19 @@ export class Renderer {
         );
     }
 
-    renderPlayer(player, is_current_player, viewportX, viewportY) {
+    renderPlayer(player, is_current_player, viewportX, viewportY, currentAnimationFrame) {
         const screenX = player.x - viewportX - GRID_SIZE/2;
         const screenY = player.y - viewportY - GRID_SIZE/2;
 
         // Only animate if player is moving
-        const frame = player.moving ? animationFrame : 0;
-        drawMonkeySprite(ctx, screenX, screenY, player.color, player.direction, frame);
+        const frame = player.moving ? currentAnimationFrame : 0;
+        drawMonkeySprite(this.ctx, screenX, screenY, player.color, player.direction, frame);
 
         // Draw outline for current player
         if (is_current_player) {
-            ctx.strokeStyle = 'white';
-            ctx.lineWidth = 2;
-            ctx.strokeRect(screenX, screenY, GRID_SIZE, GRID_SIZE);
+            this.ctx.strokeStyle = 'white';
+            this.ctx.lineWidth = 2;
+            this.ctx.strokeRect(screenX, screenY, GRID_SIZE, GRID_SIZE);
         }
     }
 
