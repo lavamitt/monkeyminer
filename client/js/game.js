@@ -1,35 +1,40 @@
+import { GRID_SIZE, BLOCK_TYPE, BASE_SPEED, ANIMATION_SPEED, ANIMATION_FRAMES, ZONE_ANIMATION_SPEED, ZONE_ANIMATION_FRAMES } from "./shared/constants.js"
+
 
 export class Game {
-    constructor(canvas, ctx, ws, hud) {
+
+    constructor(canvas, ctx, ws, hud, renderer) {
         this.canvas = canvas;
         this.ctx = ctx;
         this.ws = ws;
         this.hud = hud;
+        this.renderer = renderer;
 
         // game state
-        let players = new Map();
-        let myId = null;
-        let viewportX = 0;
-        let viewportY = 0;
-        let terrain = [];
-        let zones = new Map();
-        let messages = new Map();
+        this.players = new Map();
+        this.myId = null;
+        this.viewportX = 0;
+        this.viewportY = 0;
+        this.terrain = [[]];
+        this.zones = new Map();
+        this.messages = new Map();
 
         // animation state
-        let lastFrameTime = 0;
+        this.lastFrameTime = 0;
         // general animation
-        let animationFrame = 0;
-        let lastAnimationUpdate = 0;
+        this.lastAnimationUpdate = 0;
+        this.currentAnimationFrame = 0;
         // zone animation
-        let lastZoneAnimationUpdate = 0;
-        let currentZoneFrame = 0;
+        this.lastZoneAnimationUpdate = 0;
+        this.currentZoneFrame = 0;
 
         // Set up WebSocket handlers
         this.setupWebSocket();
     }
 
     setupWebSocket() {
-        this.ws.onMessage(data => {
+        this.ws.onmessage(event => {
+            const data = JSON.parse(event.data);
             switch (data.type) {
                 case 'init':
                 this.handleInit(data);
@@ -89,6 +94,7 @@ export class Game {
 
     handlePlayerJoin(data) {
         this.players.set(data.id, data.player);
+        this.hud.updateNumPlayers(players.size);
     }
 
     handlePlayerLeave(data) {
@@ -96,7 +102,7 @@ export class Game {
     }
 
     handlePlayerMove(data) {
-        // we exclude the current player since we've already updated optimistically.
+        // we exclude the current player since we've already updated optimistically in the gameloop.
         if (players.has(data.id) && data.id !== myId) {
             const player = players.get(data.id);
             player.x = data.x;
@@ -116,6 +122,7 @@ export class Game {
 
     handleScoreUpdate(data) {
         this.players.get(data.id).score = data.value
+        this.hud.updateScores(players, this.myId)
     }
 
     handleInventoryUpdate(data) {
@@ -126,23 +133,17 @@ export class Game {
         this.messages.set(data.id, {
             message: data.message,
             expiration: data.expiration
-          })
+        })
     }
 
     handleLetterToRead(data) {
         const author = players.get(data.authorId) ? `monkey_${data.authorId}` : 'Unknown Monkey';
         const date = new Date(data.timestamp).toLocaleString();
         this.hud.displayLetter(author, date, data.message);
-        // letterAuthorElement.textContent = author ? `monkey_${data.authorId}` : 'Unknown Monkey';
-        // letterTimeElement.textContent = new Date(data.timestamp).toLocaleString();
-        // letterTextElement.textContent = data.message;
-        // letterReadingUIElement.style.display = 'block';
     }
 
-
-
     // SET UP KEY ACTIONS
-    getTargetBlock(player) {
+    static getTargetBlock(player) {
         const playerBlockX = Math.floor(player.x / GRID_SIZE);
         const playerBlockY = Math.floor(player.y / GRID_SIZE);
         
@@ -158,13 +159,7 @@ export class Game {
         }
     }
 
-    handleKeyDownEvent(event) {
-        // If chat or letter input is focused, don't handle game controls
-        // if (document.activeElement.tagName === 'INPUT' || 
-        //     document.activeElement.tagName === 'TEXTAREA') {
-        //     return;
-        // }
-
+    handleKeyDownEvent(event, keys) {
         const activeElementIsChatInput = document.activeElement === this.hud.elements.chatInput
         const activeElementIsLetterInput = document.activeElement === this.hud.elements.letterInput
 
@@ -172,6 +167,7 @@ export class Game {
         if (!player) return;
 
         const key = event.key;
+        keys.add(key);
 
         switch (key) {
             case ' ':
@@ -186,14 +182,14 @@ export class Game {
                 break;
             case 't':
                 if (!activeElementIsChatInput && !activeElementIsLetterInput) {
-                    e.preventDefault();
-                    this.hud.displayChat()
-                    // keys delete key??
+                    event.preventDefault();
+                    this.hud.displayChat();
+                    keys.delete(key);
                 }
                 break;
             case 'l':
                 if (!activeElementIsChatInput && !activeElementIsLetterInput) {
-                    e.preventDefault();
+                    event.preventDefault();
                     this.handleNewLetter(player)
                 }
                 break;
@@ -205,8 +201,8 @@ export class Game {
             case 'Enter':
                 if (activeElementIsChatInput) {
                     this.handleChatInput(player)
-                } else if (activeElementIsLetterInput && !e.shiftKey) {
-                    e.preventDefault();
+                } else if (activeElementIsLetterInput && !event.shiftKey) {
+                    event.preventDefault();
                     this.handleLetterInput(player);
                 }
                 break;
@@ -219,7 +215,7 @@ export class Game {
     }
 
     handleMining(player) {
-        const targetBlock = this.getTargetBlock(player);
+        const targetBlock = Game.getTargetBlock(player);
         this.ws.send(JSON.stringify({
             type: 'mine',
             blockX: targetBlock.x,
@@ -228,7 +224,7 @@ export class Game {
     }
 
     handlePickup(player) {
-        const targetBlock = this.getTargetBlock(player);
+        const targetBlock = Game.getTargetBlock(player);
         this.ws.send(JSON.stringify({
             type: 'pickup',
             blockX: targetBlock.x,
@@ -237,14 +233,14 @@ export class Game {
     }
 
     handleNewLetter(player) {
-        const targetBlock = this.getTargetBlock(player);
+        const targetBlock = Game.getTargetBlock(player);
         if (terrain[targetBlock.y]?.[targetBlock.x] === BLOCK_TYPE.EMPTY) {
             this.hud.displayLetterInput()
         }
     }
 
     handleReadLetter(player) {
-        const targetBlock = this.getTargetBlock(player);
+        const targetBlock = Game.getTargetBlock(player);
         this.ws.send(JSON.stringify({
             type: 'read',
             blockX: targetBlock.x,
@@ -253,7 +249,7 @@ export class Game {
     }
 
     handleChatInput(player) {
-        const message = this.hud.clearChatAndReturnMessage()
+        const message = this.hud.hideChatAndReturnMessage()
         if (message) {
             this.ws.send(JSON.stringify({
                 type: 'chat',
@@ -266,13 +262,103 @@ export class Game {
     handleLetterInput(player) {
         const letter = this.hud.hideLetterAndReturnMessage()
         if (letter) {
-            const targetBlock = getTargetBlock(player);
-            ws.send(JSON.stringify({
+            const targetBlock = Game.getTargetBlock(player);
+            this.ws.send(JSON.stringify({
                 type: 'placeLetter',
                 message: letter,
                 blockX: targetBlock.x,
                 blockY: targetBlock.y
-              }));
+            }));
         }
+    }
+
+    handleMovement(player) {
+        this.ws.send(JSON.stringify({
+            type: 'move',
+            x: player.x,
+            y: player.y,
+            direction: player.direction,
+            moving: player.moving
+        }));
+    }
+
+    isWalkableArea(blockX, blockY) {
+        return this.terrain[blockY]?.[blockX] == BLOCK_TYPE.EMPTY 
+            || terrain[blockY]?.[blockX] == BLOCK_TYPE.EMPTY_WITH_BANANA 
+            || terrain[blockY]?.[blockX] == BLOCK_TYPE.ZONE
+    }
+
+    handlePlayerMovement(deltaTime, keys) {
+        const myPlayer = players.get(myId);
+        if (myPlayer) {
+            const speed = BASE_SPEED * deltaTime;
+            let newX = myPlayer.x;
+            let newY = myPlayer.y;
+            let moved = false;
+            let newDirection = myPlayer.direction;
+            
+            if (keys.has('ArrowLeft')) {
+              newX -= speed;
+              newDirection = 'left';
+            }
+            if (keys.has('ArrowRight')) {
+              newX += speed;
+              newDirection = 'right';
+            }
+            if (keys.has('ArrowUp')) {
+              newY -= speed;
+              newDirection = 'up';
+            }
+            if (keys.has('ArrowDown')) {
+              newY += speed;
+              newDirection = 'down';
+            }
+    
+            // Check collision with terrain
+            const blockX = Math.floor(newX / GRID_SIZE);
+            const blockY = Math.floor(newY / GRID_SIZE);
+            
+            if (this.isWalkableArea(blockX, blockY)) {
+              moved = newX !== myPlayer.x || newY !== myPlayer.y;
+              myPlayer.x = newX;
+              myPlayer.y = newY;
+            }
+    
+            // Always update direction, even if movement is blocked
+            if (newDirection !== myPlayer.direction || moved) {
+                myPlayer.direction = newDirection;
+                myPlayer.moving = moved;
+                this.handleMovement(myPlayer)
+    
+                viewportX = myPlayer.x - this.canvas.width / 2;
+                viewportY = myPlayer.y - this.canvas.height / 2;
+            }
+    
+            myPlayer.moving = moved;
+
+            this.hud.updatePosition(Math.floor(myPlayer.x / GRID_SIZE), Math.floor(myPlayer.y / GRID_SIZE))
+        }
+    }
+
+    gameLoop(timestamp, keys) {
+        // GET ANIMATION STATE
+        const deltaTime = (timestamp - this.lastFrameTime) / 1000;
+        this.lastFrameTime = timestamp;
+
+        if (timestamp - this.lastAnimationUpdate > ANIMATION_SPEED) {
+            this.currentAnimationFrame = (this.currentAnimationFrame + 1) % ANIMATION_FRAMES;
+            this.lastAnimationUpdate = timestamp;
+        }
+    
+        if (timestamp - lastZoneAnimationUpdate > ZONE_ANIMATION_SPEED) {
+            this.currentZoneFrame = (currentZoneFrame + 1) % ZONE_ANIMATION_FRAMES;
+            this.lastZoneAnimationUpdate = timestamp;
+        }
+
+        // HANDLE MOVEMENT
+        this.handlePlayerMovement(deltaTime, keys);
+
+        // RENDER MAP
+        this.renderer.render(this);
     }
 }

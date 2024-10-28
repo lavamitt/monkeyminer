@@ -5,8 +5,8 @@ export class HeadsUpDisplay {
             playerCount: elements.playerCount,
             position: elements.position,
             score: elements.score,
-            monkeyId: elements.monkeyId,
             topScores: elements.topScores,
+            monkeyId: elements.monkeyId,
             inventorySlot: elements.inventorySlot,
             chatInput: elements.chatInput,
             
@@ -65,5 +65,24 @@ export class HeadsUpDisplay {
         this.elements.letterTime.textContent = date;
         this.elements.letterText.textContent = message;
         this.elements.letterReadingUI.style.display = 'block'
+    }
+
+    updatePosition(blockX, blockY) {
+        this.elements.position.textContent = `${blockX}, ${blockY}`;
+    }
+
+    updateNumPlayers(num) {
+        this.elements.playerCount.textContent = num;
+    }
+
+    updateScores(players, myId) {
+        const current_players = Array.from(players.values());
+        current_players.sort((a, b) => b.score - a.score);
+        this.elements.topScores.innerHTML = current_players.map((player) => "monkey_" + player.id + ": " + player.score).join('<br>');
+
+        const myPlayer = players.get(myId);
+        if (myPlayer) {
+            this.elements.score.textContent = myPlayer.score
+        }
     }
 }
