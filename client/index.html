@@ -1,0 +1,106 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <title>monkey miner!</title>
+  <link rel="icon" type="image/x-icon" href="favicon.ico"/>
+  <link rel="stylesheet" href="/styles/main.css">
+</head>
+<body>
+  <canvas id="game"></canvas>
+  <div id="info">
+    Players Online: <span id="playerCount">0</span><br>
+    Position: <span id="position">0, 0</span><br>
+    ID: <span id='monkeyId'>null</span><br>
+    Score: <span id="score">0</span>
+  </div>
+  <div id="controls">
+    Arrow keys to move<br>
+    Space to mine the highlighted block<br>
+    Q to pick up a highlighted banana<br>
+    T to send a chat message<br>
+    L to write and place a letter (must be facing empty square)<br>
+    R to read highlighted letter<br>
+    Bring the needed number of monkeys with bananas<br>
+    - to the red zones for a reward!
+  </div>
+  <div id="topScores">
+    Top Scores:<br>
+    <span id="scores"></span>
+  </div>
+  <canvas id="inventorySlot" width="48" height="48"></canvas>
+  <input type="text" id="chatInput" placeholder="Press Enter to chat..." maxlength="100">
+  <div id="letterWritingUI" style="display: none;">
+    <textarea 
+      id="letterInput" 
+      placeholder="Write your letter here... Press Enter to confirm, Escape to cancel" 
+      maxlength="500"
+    ></textarea>
+  </div>
+  <div id="letterReadingUI" style="display: none;">
+    <div class="letter-content">
+      <div class="letter-header">
+        From: <span id="letterAuthor"></span><br>
+        Time: <span id="letterTime"></span>
+      </div>
+      <div id="letterText"></div>
+      <button id="closeLetter">Close</button>
+    </div>
+  </div>
+
+  <script type="module">
+    import { HeadsUpDisplay } from './js/hud.js';
+    import { Game } from './js/game.js';
+    import { Renderer } from './js/renderer.js';
+    import { SERVER_CONFIG } from './shared/constants.js';
+
+    // set up game canvas
+    const canvas = document.getElementById('game');
+    const ctx = canvas.getContext('2d');
+
+    function resizeCanvas() {
+      canvas.width = window.innerWidth;
+      canvas.height = window.innerHeight;
+    }
+    resizeCanvas();
+    window.addEventListener('resize', resizeCanvas);
+
+    const hud = new HeadsUpDisplay({
+        playerCount: document.getElementById('playerCount'),
+        position: document.getElementById('position'),
+        score: document.getElementById('score'),
+        topScores: document.getElementById('scores'),
+        monkeyId: document.getElementById('monkeyId'),
+        inventorySlot: document.getElementById('inventorySlot'),
+        chatInput: document.getElementById('chatInput'),
+        letterWritingUI: document.getElementById('letterWritingUI'),
+        letterInput: document.getElementById('letterInput'),
+        letterReadingUI: document.getElementById('letterReadingUI'),
+        letterAuthor: document.getElementById('letterAuthor'),
+        letterTime: document.getElementById('letterTime'),
+        letterText: document.getElementById('letterText'),
+        closeLetterButton: document.getElementById('closeLetter') 
+    })
+
+    // SET UP WEBSOCKET
+    const ws = new WebSocket(SERVER_CONFIG.DEV_WS_URL);
+
+    // CREATE RENDERER
+    const renderer = new Renderer(canvas, ctx)
+
+    // MAIN GAME
+    const game = new Game(canvas, ctx, ws, hud, renderer)
+
+    const keys = new Set();
+    window.addEventListener('keydown', (e) => game.handleKeyDownEvent(e, keys));
+    window.addEventListener('keyup', (e) => keys.delete(e.key));
+
+    function gameLoop(timestamp) {
+        game.gameLoop(timestamp, keys);
+        requestAnimationFrame(gameLoop);
+    }
+
+    game.lastFrameTime = performance.now();
+    gameLoop();
+  </script>
+</body>
+</html>

@@ -4,7 +4,7 @@ const fs = require('fs');
 
 const server = http.createServer((req, res) => {
   if (req.url === '/') {
-    fs.readFile('index.html', (err, data) => {
+    fs.readFile('./client/index.html', (err, data) => {
       if (err) {
         res.writeHead(500);
         res.end('Error loading index.html');
@@ -13,8 +13,18 @@ const server = http.createServer((req, res) => {
         res.end(data);
       }
     });
-  } else if (req.url === '/monkey.js') {
-    fs.readFile('./sprites/monkey.js', (err, data) => {
+   } else if (req.url === '/styles/main.css') {
+      fs.readFile('./client/styles/main.css', (err, data) => {
+        if (err) {
+          res.writeHead(404);
+          res.end('File not found');
+        } else {
+          res.writeHead(200, { 'Content-Type': 'text/css' });
+          res.end(data);
+        }
+      });
+  } else if (req.url === '/js/game.js') {
+    fs.readFile('./client/js/game.js', (err, data) => {
       if (err) {
         res.writeHead(404);
         res.end('File not found');
@@ -23,8 +33,8 @@ const server = http.createServer((req, res) => {
         res.end(data);
       }
     });
-  } else if (req.url === '/banana.js') {
-    fs.readFile('./sprites/banana.js', (err, data) => {
+  } else if (req.url === '/js/hud.js') {
+    fs.readFile('./client/js/hud.js', (err, data) => {
       if (err) {
         res.writeHead(404);
         res.end('File not found');
@@ -33,8 +43,48 @@ const server = http.createServer((req, res) => {
         res.end(data);
       }
     });
-  } else if (req.url === '/envelope.js') {
-    fs.readFile('./sprites/envelope.js', (err, data) => {
+  } else if (req.url === '/js/renderer.js') {
+    fs.readFile('./client/js/renderer.js', (err, data) => {
+      if (err) {
+        res.writeHead(404);
+        res.end('File not found');
+      } else {
+        res.writeHead(200, { 'Content-Type': 'application/javascript' });
+        res.end(data);
+      }
+    });
+  } else if (req.url === '/shared/constants.js') {
+    fs.readFile('./shared/constants.js', (err, data) => {
+      if (err) {
+        res.writeHead(404);
+        res.end('File not found');
+      } else {
+        res.writeHead(200, { 'Content-Type': 'application/javascript' });
+        res.end(data);
+      }
+    });
+  } else if (req.url === '/sprites/monkey.js') {
+    fs.readFile('./client/sprites/monkey.js', (err, data) => {
+      if (err) {
+        res.writeHead(404);
+        res.end('File not found');
+      } else {
+        res.writeHead(200, { 'Content-Type': 'application/javascript' });
+        res.end(data);
+      }
+    });
+  } else if (req.url === '/sprites/banana.js') {
+    fs.readFile('./client/sprites/banana.js', (err, data) => {
+      if (err) {
+        res.writeHead(404);
+        res.end('File not found');
+      } else {
+        res.writeHead(200, { 'Content-Type': 'application/javascript' });
+        res.end(data);
+      }
+    });
+  } else if (req.url === '/sprites/envelope.js') {
+    fs.readFile('./client/sprites/envelope.js', (err, data) => {
       if (err) {
         res.writeHead(404);
         res.end('File not found');
@@ -53,6 +103,9 @@ const server = http.createServer((req, res) => {
         res.end(data);
       }
     });
+  } else {
+    console.log("File asked does not exist!")
+    console.log(req.url)
   }
 });
 

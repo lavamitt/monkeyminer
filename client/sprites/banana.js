@@ -46,8 +46,6 @@ function drawBananaSprite(ctx, x, y) {
         '#E5AA7A',                      // 7: light brown highlight tip
         '#8F4E22'                       // 8: dark brown tip
     ];
-
-    const spriteWidth = bananaSprite[0].length;
     bananaSprite.forEach((row, i) => {
         row.forEach((pixel, j) => {
             if (pixel !== 0) {
