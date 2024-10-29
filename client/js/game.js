@@ -1,4 +1,15 @@
-import { GRID_SIZE, BLOCK_TYPE, BASE_SPEED, ANIMATION_SPEED, ANIMATION_FRAMES, ZONE_ANIMATION_SPEED, ZONE_ANIMATION_FRAMES } from "../shared/constants.js"
+import {
+    GRID_SIZE,
+    BLOCK_TYPE,
+    BASE_SPEED,
+    ANIMATION_SPEED,
+    ANIMATION_FRAMES,
+    ZONE_ANIMATION_SPEED,
+    ZONE_ANIMATION_FRAMES,
+    WEBSOCKET_SERVER_TO_CLIENT_EVENTS,
+    WEBSOCKET_CLIENT_TO_SERVER_EVENTS,
+    DIRECTIONS
+} from "../shared/constants.js"
 
 export class Game {
 
@@ -35,34 +46,34 @@ export class Game {
         this.ws.onmessage = (event => {
             const data = JSON.parse(event.data);
             switch (data.type) {
-                case 'init':
+                case WEBSOCKET_SERVER_TO_CLIENT_EVENTS.INIT:
                 this.handleInit(data);
                 break;
-            case 'playerJoin':
+            case WEBSOCKET_SERVER_TO_CLIENT_EVENTS.PLAYER_JOIN:
                 this.handlePlayerJoin(data);
                 break;
-            case 'playerLeave':
+            case WEBSOCKET_SERVER_TO_CLIENT_EVENTS.PLAYER_LEAVE:
                 this.handlePlayerLeave(data);
                 break;
-            case 'playerMove':
+            case WEBSOCKET_SERVER_TO_CLIENT_EVENTS.PLAYER_MOVE:
                 this.handlePlayerMove(data);
                 break;
-            case 'terrainUpdate':
+            case WEBSOCKET_SERVER_TO_CLIENT_EVENTS.TERRAIN_UPDATE:
                 this.handleTerrainUpdate(data);
                 break;
-            case 'zoneUpdate':
+            case WEBSOCKET_SERVER_TO_CLIENT_EVENTS.ZONE_UPDATE:
                 this.handleZoneUpdate(data);
                 break;
-            case 'scoreUpdate':
+            case WEBSOCKET_SERVER_TO_CLIENT_EVENTS.SCORE_UPDATE:
                 this.handleScoreUpdate(data);
                 break;
-            case 'inventoryUpdate':
+            case WEBSOCKET_SERVER_TO_CLIENT_EVENTS.INVENTORY_UPDATE:
                 this.handleInventoryUpdate(data);
                 break;
-            case 'chatUpdate':
+            case WEBSOCKET_SERVER_TO_CLIENT_EVENTS.CHAT_UPDATE:
                 this.handleChatUpdate(data);
                 break;
-            case 'letterToRead':
+            case WEBSOCKET_SERVER_TO_CLIENT_EVENTS.LETTER_TO_READ:
                 this.handleLetterToRead(data);
                 break;
             }
@@ -221,7 +232,7 @@ export class Game {
     handleMining(player) {
         const targetBlock = Game.getTargetBlock(player);
         this.ws.send(JSON.stringify({
-            type: 'mine',
+            type: WEBSOCKET_CLIENT_TO_SERVER_EVENTS.MINE,
             blockX: targetBlock.x,
             blockY: targetBlock.y
         }));
@@ -230,18 +241,15 @@ export class Game {
     handlePickup(player) {
         const targetBlock = Game.getTargetBlock(player);
         this.ws.send(JSON.stringify({
-            type: 'pickup',
+            type: WEBSOCKET_CLIENT_TO_SERVER_EVENTS.PICKUP,
             blockX: targetBlock.x,
             blockY: targetBlock.y
         }));
     }
 
     handleNewLetter(player) {
-        console.log("HELLO");
         const targetBlock = Game.getTargetBlock(player);
-        console.log(targetBlock)
         if (this.terrain[targetBlock.y]?.[targetBlock.x] === BLOCK_TYPE.EMPTY) {
-            console.log("GOT INSIDE")
             this.hud.displayLetterInput()
         }
     }
@@ -249,7 +257,7 @@ export class Game {
     handleReadLetter(player) {
         const targetBlock = Game.getTargetBlock(player);
         this.ws.send(JSON.stringify({
-            type: 'read',
+            type: WEBSOCKET_CLIENT_TO_SERVER_EVENTS.READ,
             blockX: targetBlock.x,
             blockY: targetBlock.y
           }));
@@ -259,7 +267,7 @@ export class Game {
         const message = this.hud.hideChatAndReturnMessage()
         if (message) {
             this.ws.send(JSON.stringify({
-                type: 'chat',
+                type: WEBSOCKET_CLIENT_TO_SERVER_EVENTS.CHAT,
                 id: player.id,
                 message
             }))
@@ -271,7 +279,7 @@ export class Game {
         if (letter) {
             const targetBlock = Game.getTargetBlock(player);
             this.ws.send(JSON.stringify({
-                type: 'placeLetter',
+                type: WEBSOCKET_CLIENT_TO_SERVER_EVENTS.PLACE_LETTER,
                 message: letter,
                 blockX: targetBlock.x,
                 blockY: targetBlock.y
@@ -281,7 +289,7 @@ export class Game {
 
     handleMovement(player) {
         this.ws.send(JSON.stringify({
-            type: 'move',
+            type: WEBSOCKET_CLIENT_TO_SERVER_EVENTS.MOVE,
             x: player.x,
             y: player.y,
             direction: player.direction,
@@ -306,19 +314,19 @@ export class Game {
             
             if (keys.has('ArrowLeft')) {
               newX -= speed;
-              newDirection = 'left';
+              newDirection = DIRECTIONS.LEFT;
             }
             if (keys.has('ArrowRight')) {
               newX += speed;
-              newDirection = 'right';
+              newDirection = DIRECTIONS.RIGHT;
             }
             if (keys.has('ArrowUp')) {
               newY -= speed;
-              newDirection = 'up';
+              newDirection = DIRECTIONS.UP;
             }
             if (keys.has('ArrowDown')) {
               newY += speed;
-              newDirection = 'down';
+              newDirection = DIRECTIONS.DOWN;
             }
     
             // Check collision with terrain

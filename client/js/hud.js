@@ -27,7 +27,7 @@ export class HeadsUpDisplay {
 
         // set up button to close
         this.elements.closeLetterButton.addEventListener('click', () => {
-            letterReadingUI.style.display = 'none';
+            this.elements.letterReadingUI.style.display = 'none';
         });
     }
 
