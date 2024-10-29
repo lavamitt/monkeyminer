@@ -37,6 +37,9 @@ export const CHAT_MESSAGE_DURATION = 5 * 1000; // 5 seconds
 export const MAX_CHAT_LENGTH = 100;
 export const MAX_LETTER_LENGTH = 500;
 
+// BANANAS
+export const BANANA = "banana"
+
 // WebSocket Events
 export const WEBSOCKET_SERVER_TO_CLIENT_EVENTS = Object.freeze({
     INIT: 'init',
