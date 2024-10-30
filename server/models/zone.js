@@ -1,12 +1,12 @@
-import { MIN_DISTANCE_BETWEEN_ZONES } from '../shared/constants.js';
+import { MIN_DISTANCE_BETWEEN_ZONES } from '../../shared/constants.js';
 
 /**
  * Represents a zone in the game
  */
-class Zone {
+export class Zone {
     /**
-     * @param {number} x - Zone's top-left X coordinate
-     * @param {number} y - Zone's top-left Y coordinate
+     * @param {number} x - Zone's top-left X coordinate (in blockX)
+     * @param {number} y - Zone's top-left Y coordinate (in blockY)
      * @param {number} width - Zone width
      * @param {number} height - Zone height
      * @param {number} requiredMonkeys - Number of monkeys needed to complete the zone
@@ -22,6 +22,10 @@ class Zone {
         this.key = `${x},${y}`;
     }
 
+    /**
+     * Checks whether the specified block is too close to a zone to become a zone
+     * @returns {boolean} Whether the block is too close
+     */
     static tooCloseToNearestZone(blockX, blockY, zones) {
         for (let [_, zone] of zones) {
             // Find closest x and y points on the zone
@@ -30,8 +34,8 @@ class Zone {
             
             // Calculate distance to closest point
             const distance = Math.sqrt(
-                Math.pow(x - closestX, 2) + 
-                Math.pow(y - closestY, 2)
+                Math.pow(blockX - closestX, 2) + 
+                Math.pow(blockY - closestY, 2)
             );
             
             if (distance < MIN_DISTANCE_BETWEEN_ZONES) {
@@ -41,6 +45,10 @@ class Zone {
         return false;
     }
 
+    /**
+     * Checks whether the specified block is part of a zone.
+     * @returns {String|null}} The zone if the specified block is in one, else null
+     */
     static isInZone(blockX, blockY, zones) {
         for (let [_, zone] of zones) {
             if (blockX >= zone.x && blockX < zone.x + zone.width &&
@@ -51,8 +59,12 @@ class Zone {
         return null;
     }
 
+    /**
+     * Checks if specified money is in this zone
+     * @returns {boolean} Whether monkey is in the zone
+     */
     hasMonkey(monkeyId) {
-        this.currentMonkeys.has(monkeyId);
+        return this.currentMonkeys.has(monkeyId);
     }
   
     /**
@@ -79,8 +91,8 @@ class Zone {
   
     /**
      * Check if a position is within this zone
-     * @param {number} x - X coordinate to check
-     * @param {number} y - Y coordinate to check
+     * @param {number} x - X coordinate to check, in blockX
+     * @param {number} y - Y coordinate to check, in blockY
      * @returns {boolean}
      */
     containsPosition(x, y) {

@@ -34,6 +34,7 @@ wss.on('connection', (ws) => {
   // Send client their ID, initial state, and terrain
     ws.send(JSON.stringify({
         type: WEBSOCKET_SERVER_TO_CLIENT_EVENTS.INIT,
+        id: clientId,
         ...game.toJSON()
     }));
 
@@ -80,7 +81,7 @@ wss.on('connection', (ws) => {
 
                 const playerBlockX = Math.floor(player.x / GRID_SIZE);
                 const playerBlockY = Math.floor(player.y / GRID_SIZE);
-                const zoneKey = Zone.isInZone(playerBlockX, playerBlockY);
+                const zoneKey = Zone.isInZone(playerBlockX, playerBlockY, game.zones);
                 if (zoneKey && player.inventory.length > 0) {
                     const zone = game.getZone(zoneKey);
                     if (zone && !zone.completed) {
@@ -127,7 +128,13 @@ wss.on('connection', (ws) => {
                     }
                 } else {
                     // Remove player from any zones they were in
+                    console.log("REMOVING PLAYER!")
+                    console.log(clientId)
                     for (let [zoneKey, zone] of game.zones) {
+                        if (zone.currentMonkeys.size > 0) {
+                            console.log(zone.currentMonkeys);
+                            console.log(zone.hasMonkey(clientId))
+                        }
                         if (zone.hasMonkey(clientId)) {
                             zone.removeMonkey(clientId);
                             wss.clients.forEach(client => {
@@ -139,6 +146,7 @@ wss.on('connection', (ws) => {
                                     }));
                                 }
                             });
+                            console.log(zone.toJSON());
                         }
                     }
                 }
@@ -220,7 +228,7 @@ wss.on('connection', (ws) => {
                 }
             });
         } else if (data.type == WEBSOCKET_CLIENT_TO_SERVER_EVENTS.PLACE_LETTER) {
-            const newLetter = game.addNewLetter(clientId, data.message, data.blockX, data.blockY);
+            const newLetter = game.addNewLetter(clientId, data.content, data.blockX, data.blockY);
             if (newLetter) {
                 wss.clients.forEach(client => {
                     if (client.readyState === WebSocket.OPEN) {

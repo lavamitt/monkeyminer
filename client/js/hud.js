@@ -1,14 +1,14 @@
 export class HeadsUpDisplay {
 
     constructor(elements) {
-        const {
-            playerCount,
-            position,
-            score,
-            topScores,
-            monkeyId,
-            inventorySlo,
-            chatInput,
+        this.elements = {
+            playerCount: elements.playerCount,
+            position: elements.position,
+            score: elements.score,
+            topScores: elements.topScores,
+            monkeyId: elements.monkeyId,
+            inventorySlot: elements.inventorySlot,
+            chatInput: elements.chatInput,
             
             // for letter writing
             letterWritingUI: elements.letterWritingUI,

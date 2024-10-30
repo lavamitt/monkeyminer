@@ -1,9 +1,9 @@
-import { CHAT_MESSAGE_DURATION } from '../shared/constants.js';
+import { CHAT_MESSAGE_DURATION } from '../../shared/constants.js';
 
 /**
  * Represents a chat message in the game
  */
-class Message {
+export class Message {
     /**
      * @param {string} playerId - ID of the player who sent the message
      * @param {string} content - Message content

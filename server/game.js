@@ -9,11 +9,13 @@ import {
     MIN_ZONE_SIDE,
     MIN_REQUIRED_MONKEYS,
     MAX_REQUIRED_MONKEYS,
-    MINEABLE_BLOCKS
+    MINEABLE_BLOCKS,
+    ORE_SPAWN_CHANCE
 } from '../shared/constants.js';
 import { Zone } from './models/zone.js';
 import { Player } from './models/player.js';
 import { Message } from './models/message.js';
+import { Letter } from './models/letter.js';
 
 export class GameState {
     constructor() {
@@ -21,11 +23,16 @@ export class GameState {
         this.messages = new Map();
         this.letters = new Map();
         this.zones = new Map();
-        this.terrain = this.generateTerrain();
+
+        // starting area top left corner
+        this.startX = Math.floor(WORLD_SIZE / 2 - START_AREA_SIZE / 2);
+        this.startY = Math.floor(WORLD_SIZE / 2 - START_AREA_SIZE / 2);
 
         // where new players spawn
-        this.spawnX = Math.floor(WORLD_SIZE / 2 - START_AREA_SIZE / 2);
-        this.spawnY = Math.floor(WORLD_SIZE / 2 - START_AREA_SIZE / 2);
+        this.spawnX = (this.startX + START_AREA_SIZE/2) * GRID_SIZE;
+        this.spawnY = (this.startY + START_AREA_SIZE/2) * GRID_SIZE;
+
+        this.terrain = this.generateTerrain();
     }
 
     generateTerrain() {
@@ -37,13 +44,13 @@ export class GameState {
         this.addRandomOre(terrain);
 
         this.addRandomZones(terrain);
+
+        return terrain;
     }
 
     setUpStartingArea(terrain) {
-        const startX = this.spawnX;
-        const startY = this.spawnY;
-        for (let y = startY; y < startY + START_AREA_SIZE; y++) {
-            for (let x = startX; x < startX + START_AREA_SIZE; x++) {
+        for (let y = this.startY; y < this.startY + START_AREA_SIZE; y++) {
+            for (let x = this.startX; x < this.startX + START_AREA_SIZE; x++) {
                 terrain[y][x] = BLOCK_TYPE.EMPTY;
             }
         }
@@ -93,7 +100,7 @@ export class GameState {
                 const requiredMonkeys = Math.floor(Math.random() * (MAX_REQUIRED_MONKEYS - MIN_REQUIRED_MONKEYS) + MIN_REQUIRED_MONKEYS);
                 let newZone = new Zone(x, y, zoneWidth, zoneHeight, requiredMonkeys);
 
-                zones.set(newZone.id, newZone);
+                this.zones.set(newZone.key, newZone);
                 zonesCreated += 1;
             }
         }
@@ -110,9 +117,10 @@ export class GameState {
     isMineableBlock(blockX, blockY) {
         if (blockX >= 0 && blockX < WORLD_SIZE 
             && blockY >= 0 && blockY < WORLD_SIZE 
-            && MINEABLE_BLOCKS.contains(terrain[blockY][blockX])) {
-                
-            }
+            && MINEABLE_BLOCKS.includes(this.getBlock(blockX,blockY))) {
+                return true;
+        }
+        return false;
     }
 
     getZone(key) {
@@ -151,19 +159,19 @@ export class GameState {
 
     getLetter(blockX, blockY) {
         const letterKey = `${blockX},${blockY}`;
-        return letters.get(letterKey);
+        return this.letters.get(letterKey);
     }
 
      /**
      * Convert gamestate data to network-safe format
-     * @returns {Object} Serialized player data
+     * @returns {Object} Serialized game state data
      */
      toJSON() {
         return {
             players: Array.from(this.players.entries()).map(([_, player]) => player.toJSON()),
             terrain: this.terrain,
-            zones: Array.from(zones.entries()).map(([_, zone]) => zone.toJSON()),
-            messages: Array.from(messages.entries()).map(([_, msg]) => msg.toJSON()),
+            zones: Array.from(this.zones.entries()).map(([_, zone]) => zone.toJSON()),
+            messages: Array.from(this.messages.entries()).map(([_, msg]) => msg.toJSON()),
             gridSize: GRID_SIZE
         };
     }

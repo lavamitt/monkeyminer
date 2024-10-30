@@ -1,7 +1,7 @@
 /**
  * Represents a letter in the game
  */
-class Letter {
+export class Letter {
     /**
      * @param {string} authorId - ID of the player who wrote the letter
      * @param {string} content - Letter content

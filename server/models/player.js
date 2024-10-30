@@ -1,4 +1,4 @@
-import { DIRECTIONS } from '../shared/constants.js';
+import { DIRECTIONS } from '../../shared/constants.js';
 
 /**
  * Represents a player in the game
@@ -40,10 +40,18 @@ export class Player {
         this.direction = direction;
     }
 
+    /**
+     * Adds to the current score
+     * @param {number} new_score - Amount to add
+     */
     addToScore(new_score) {
         this.score += new_score;
     }
 
+    /**
+     * Update's player score
+     * @param {number} new_score - New score
+     */
     updateScore(new_score) {
         this.score = new_score;
     }
