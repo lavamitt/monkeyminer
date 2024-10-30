@@ -31,7 +31,7 @@ wss.on('connection', (ws) => {
     const clientId = Math.random().toString(36).substring(2, 9);
     game.addNewPlayer(clientId)
 
-  // Send client their ID, initial state, and terrain
+  // Send client initial game state
     ws.send(JSON.stringify({
         type: WEBSOCKET_SERVER_TO_CLIENT_EVENTS.INIT,
         id: clientId,
@@ -67,6 +67,7 @@ wss.on('connection', (ws) => {
             if (player) {
                 player.updatePosition(data.x, data.y, data.direction);
         
+                // Update clients on new player position
                 wss.clients.forEach(client => {
                     if (client.readyState === WebSocket.OPEN) {
                         client.send(JSON.stringify({
@@ -79,6 +80,7 @@ wss.on('connection', (ws) => {
                     }
                 });
 
+                // Check if the player entered a zone
                 const playerBlockX = Math.floor(player.x / GRID_SIZE);
                 const playerBlockY = Math.floor(player.y / GRID_SIZE);
                 const zoneKey = Zone.isInZone(playerBlockX, playerBlockY, game.zones);
@@ -87,6 +89,7 @@ wss.on('connection', (ws) => {
                     if (zone && !zone.completed) {
                         zone.addMonkey(clientId);
                         if (zone.completed) {
+                            // Handle zone completion
                             zone.currentMonkeys.forEach(playerId => {
                                 const zonePlayer = game.getPlayer(playerId);
                                 if (zonePlayer) {
@@ -128,13 +131,7 @@ wss.on('connection', (ws) => {
                     }
                 } else {
                     // Remove player from any zones they were in
-                    console.log("REMOVING PLAYER!")
-                    console.log(clientId)
                     for (let [zoneKey, zone] of game.zones) {
-                        if (zone.currentMonkeys.size > 0) {
-                            console.log(zone.currentMonkeys);
-                            console.log(zone.hasMonkey(clientId))
-                        }
                         if (zone.hasMonkey(clientId)) {
                             zone.removeMonkey(clientId);
                             wss.clients.forEach(client => {
@@ -146,14 +143,12 @@ wss.on('connection', (ws) => {
                                     }));
                                 }
                             });
-                            console.log(zone.toJSON());
                         }
                     }
                 }
             }
         } else if (data.type === WEBSOCKET_CLIENT_TO_SERVER_EVENTS.MINE) {
             const player = game.getPlayer(clientId);
-
             const blockX = data.blockX;
             const blockY = data.blockY;
       
@@ -168,6 +163,7 @@ wss.on('connection', (ws) => {
                     game.setBlock(blockX, blockY, BLOCK_TYPE.EMPTY);
                 }
         
+                // Update clients on mined block
                 wss.clients.forEach(client => {
                     if (client.readyState === WebSocket.OPEN) {
                         client.send(JSON.stringify({
@@ -179,6 +175,7 @@ wss.on('connection', (ws) => {
                     }
                 });
 
+                // Update clients on updated score for player
                 wss.clients.forEach(client => {
                     if (client.readyState === WebSocket.OPEN) {
                         client.send(JSON.stringify({
@@ -197,6 +194,7 @@ wss.on('connection', (ws) => {
                 player.addToInventory(BANANA);
                 game.setBlock(blockX, blockY, BLOCK_TYPE.EMPTY);
 
+                // Update clients that banana was picked up from floor
                 wss.clients.forEach(client => {
                     if (client.readyState === WebSocket.OPEN) {
                         client.send(JSON.stringify({
@@ -208,6 +206,7 @@ wss.on('connection', (ws) => {
                     }
                 });
 
+                // Update client new banana
                 ws.send(JSON.stringify({
                     type: WEBSOCKET_SERVER_TO_CLIENT_EVENTS.INVENTORY_UPDATE,
                     id: clientId,
@@ -217,6 +216,7 @@ wss.on('connection', (ws) => {
         } else if (data.type == WEBSOCKET_CLIENT_TO_SERVER_EVENTS.CHAT) {
             const newMessage = game.addNewMessage(data.id, data.message);
 
+            // Broadcast new message to all clients
             wss.clients.forEach(client => {
                 if (client.readyState === WebSocket.OPEN) {
                     client.send(JSON.stringify({
@@ -230,6 +230,7 @@ wss.on('connection', (ws) => {
         } else if (data.type == WEBSOCKET_CLIENT_TO_SERVER_EVENTS.PLACE_LETTER) {
             const newLetter = game.addNewLetter(clientId, data.content, data.blockX, data.blockY);
             if (newLetter) {
+                // Broadcast new letter to all clients
                 wss.clients.forEach(client => {
                     if (client.readyState === WebSocket.OPEN) {
                         client.send(JSON.stringify({
@@ -247,6 +248,7 @@ wss.on('connection', (ws) => {
             if (game.getBlock(blockX, blockY) === BLOCK_TYPE.EMPTY_WITH_ENVELOPE) {
                 const letter = game.getLetter(blockX, blockY);
                 if (letter) {
+                    // Send letter data to client who requested it
                     ws.send(JSON.stringify({
                         type: WEBSOCKET_SERVER_TO_CLIENT_EVENTS.LETTER_TO_READ,
                         ...letter.toJSON()
@@ -259,6 +261,7 @@ wss.on('connection', (ws) => {
     ws.on('close', () => {
         game.removePlayer(clientId);
         for (let [zoneKey, zone] of game.zones) {
+            // Make sure closed player is removed from zones
             if (zone.hasMonkey(clientId)) {
                 zone.removeMonkey(clientId);
                 wss.clients.forEach(client => {
@@ -273,6 +276,7 @@ wss.on('connection', (ws) => {
             }
         }
 
+        // Broadcast to all clients that player left
         wss.clients.forEach(client => {
             if (client.readyState === WebSocket.OPEN) {
                 client.send(JSON.stringify({

@@ -35,6 +35,8 @@ export class GameState {
         this.terrain = this.generateTerrain();
     }
 
+    // TERRAIN GENERATION LOGIC
+
     generateTerrain() {
         const terrain = new Array(WORLD_SIZE).fill(null)
             .map(() => new Array(WORLD_SIZE).fill(BLOCK_TYPE.DIRT));
@@ -106,6 +108,8 @@ export class GameState {
         }
     }
 
+    // GET/SET METHODS FOR TERRAIN
+
     getBlock(blockX, blockY) {
         return this.terrain[blockY][blockX];
     }
@@ -127,6 +131,8 @@ export class GameState {
         return this.zones.get(key);
     }
 
+    // GET/SET METHODS FOR PLAYERS
+
     addNewPlayer(playerId) {
         const newPlayer = new Player(playerId, this.spawnX, this.spawnY);
         this.players.set(playerId, newPlayer);
@@ -140,6 +146,8 @@ export class GameState {
     removePlayer(playerId) {
         this.players.delete(playerId);
     }
+
+    // GET/SET METHODS FOR MESSAGES AND LETTERS
 
     addNewMessage(playerId, content) {
         const newMessage = new Message(playerId, content);
