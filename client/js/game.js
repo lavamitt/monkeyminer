@@ -154,7 +154,7 @@ export class Game {
     handleLetterToRead(data) {
         const author = this.players.get(data.authorId) ? `monkey_${data.authorId}` : 'Unknown Monkey';
         const date = new Date(data.timestamp).toLocaleString();
-        this.hud.displayLetter(author, date, data.message);
+        this.hud.displayLetter(author, date, data.content);
     }
 
     // SET UP KEY ACTIONS
@@ -280,7 +280,7 @@ export class Game {
             const targetBlock = Game.getTargetBlock(player);
             this.ws.send(JSON.stringify({
                 type: WEBSOCKET_CLIENT_TO_SERVER_EVENTS.PLACE_LETTER,
-                message: letter,
+                content: letter,
                 blockX: targetBlock.x,
                 blockY: targetBlock.y
             }));

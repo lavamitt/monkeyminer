@@ -31,11 +31,15 @@ export const ZONE_ANIMATION_FRAMES = 8;
 
 // Game Generation
 export const ORE_SPAWN_CHANCE = 0.1;
+export const MINEABLE_BLOCKS = [BLOCK_TYPE.DIRT, BLOCK_TYPE.ORE]
 
 // Message System
 export const CHAT_MESSAGE_DURATION = 5 * 1000; // 5 seconds
 export const MAX_CHAT_LENGTH = 100;
 export const MAX_LETTER_LENGTH = 500;
+
+// BANANAS
+export const BANANA = "banana"
 
 // WebSocket Events
 export const WEBSOCKET_SERVER_TO_CLIENT_EVENTS = Object.freeze({
