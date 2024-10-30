@@ -9,12 +9,13 @@ class Letter {
      * @param {number} position.x - X coordinate
      * @param {number} position.y - Y coordinate
      */
-    constructor(authorId, content, position) {
+    constructor(authorId, content, blockX, blockY) {
         this.authorId = authorId;
         this.content = content;
-        this.position = position;
+        this.x = blockX;
+        this.y = blockY;
         this.timestamp = Date.now();
-        this.id = `${position.x},${position.y}`;
+        this.key = `${blockX},${blockY}`;
     }
   
     /**
@@ -24,19 +25,7 @@ class Letter {
      * @returns {boolean}
      */
     isAtPosition(x, y) {
-        return this.position.x === x && this.position.y === y;
-    }
-  
-    /**
-     * Convert letter to network-safe format for reading
-     * @returns {Object} Serialized letter data
-     */
-    toReadFormat() {
-        return {
-            authorId: this.authorId,
-            message: this.content,
-            timestamp: this.timestamp
-        };
+        return this.x === x && this.y === y;
     }
   
     /**
@@ -45,10 +34,10 @@ class Letter {
      */
     toJSON() {
         return {
-            id: this.id,
             authorId: this.authorId,
             content: this.content,
-            position: this.position,
+            x: this.x,
+            y: this.y,
             timestamp: this.timestamp
         };
     }

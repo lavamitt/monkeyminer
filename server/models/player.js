@@ -40,6 +40,10 @@ export class Player {
         this.direction = direction;
     }
 
+    addToScore(new_score) {
+        this.score += new_score;
+    }
+
     updateScore(new_score) {
         this.score = new_score;
     }
@@ -51,7 +55,6 @@ export class Player {
     addToInventory(item) {
         this.inventory.push(item);
     }
-
 
     /**
      * Remove item from player's inventory

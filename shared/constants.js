@@ -31,6 +31,7 @@ export const ZONE_ANIMATION_FRAMES = 8;
 
 // Game Generation
 export const ORE_SPAWN_CHANCE = 0.1;
+export const MINEABLE_BLOCKS = [BLOCK_TYPE.DIRT, BLOCK_TYPE.ORE]
 
 // Message System
 export const CHAT_MESSAGE_DURATION = 5 * 1000; // 5 seconds

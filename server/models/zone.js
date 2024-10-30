@@ -50,6 +50,10 @@ class Zone {
         }
         return null;
     }
+
+    hasMonkey(monkeyId) {
+        this.currentMonkeys.has(monkeyId);
+    }
   
     /**
      * Add a monkey to the zone

@@ -1,9 +1,21 @@
 
-import { BLOCK_TYPE, WORLD_SIZE, START_AREA_SIZE, GRID_SIZE, NUM_ZONES, MAX_ZONE_SIDE, MIN_ZONE_SIDE, MIN_REQUIRED_MONKEYS, MAX_REQUIRED_MONKEYS, BANANA } from '../shared/constants.js';
+import { 
+    BLOCK_TYPE,
+    WORLD_SIZE,
+    START_AREA_SIZE,
+    GRID_SIZE,
+    NUM_ZONES,
+    MAX_ZONE_SIDE,
+    MIN_ZONE_SIDE,
+    MIN_REQUIRED_MONKEYS,
+    MAX_REQUIRED_MONKEYS,
+    MINEABLE_BLOCKS
+} from '../shared/constants.js';
 import { Zone } from './models/zone.js';
-import { Player } from './moels/player.js';
+import { Player } from './models/player.js';
+import { Message } from './models/message.js';
 
-class GameState {
+export class GameState {
     constructor() {
         this.players = new Map();
         this.messages = new Map();
@@ -50,79 +62,96 @@ class GameState {
     }
 
     addRandomZones(terrain) {
-        let zones_created = 0;
-        while (zones_created < NUM_ZONES) {
-            const zone_width = Math.floor(Math.random() * (MAX_ZONE_SIDE - MIN_ZONE_SIDE) + MIN_ZONE_SIDE)
-            const zone_height = Math.floor(Math.random() * (MAX_ZONE_SIDE - MIN_ZONE_SIDE) + MIN_ZONE_SIDE)
+        let zonesCreated = 0;
+        while (zonesCreated < NUM_ZONES) {
+            const zoneWidth = Math.floor(Math.random() * (MAX_ZONE_SIDE - MIN_ZONE_SIDE) + MIN_ZONE_SIDE)
+            const zoneHeight = Math.floor(Math.random() * (MAX_ZONE_SIDE - MIN_ZONE_SIDE) + MIN_ZONE_SIDE)
 
-            const x = Math.floor(Math.random() * (WORLD_SIZE - zone_width));
-            const y = Math.floor(Math.random() * (WORLD_SIZE - zone_height));
+            const x = Math.floor(Math.random() * (WORLD_SIZE - zoneWidth));
+            const y = Math.floor(Math.random() * (WORLD_SIZE - zoneHeight));
 
-            let is_valid_location = true;
+            let isValidLocation = true;
             // Check if entire zone area is empty and far from other zones
-            for (let dy = 0; dy < zone_height; dy++) {
-                for (let dx = 0; dx < zone_width; dx++) {
+            for (let dy = 0; dy < zoneHeight; dy++) {
+                for (let dx = 0; dx < zoneWidth; dx++) {
                     if (terrain[y + dy][x + dx] == BLOCK_TYPE.EMPTY || 
                         Zone.tooCloseToNearestZone(x + dx, y + dy, this.zones)) {
-                            is_valid_location = false;
+                            isValidLocation = false;
                             break;
                     }
                 }
-                if (!is_valid_location) break;
+                if (!isValidLocation) break;
             }
 
-            if (is_valid_location) {
-                for (let dy = 0; dy < zone_height; dy++) {
-                    for (let dx = 0; dx < zone_width; dx++) {
+            if (isValidLocation) {
+                for (let dy = 0; dy < zoneHeight; dy++) {
+                    for (let dx = 0; dx < zoneWidth; dx++) {
                         terrain[y + dy][x + dx] = BLOCK_TYPE.ZONE;
                     }
                 }
                 
-                const required_monkeys = Math.floor(Math.random() * (MAX_REQUIRED_MONKEYS - MIN_REQUIRED_MONKEYS) + MIN_REQUIRED_MONKEYS);
-                let new_zone = new Zone(x, y, zone_width, zone_height, required_monkeys);
+                const requiredMonkeys = Math.floor(Math.random() * (MAX_REQUIRED_MONKEYS - MIN_REQUIRED_MONKEYS) + MIN_REQUIRED_MONKEYS);
+                let newZone = new Zone(x, y, zoneWidth, zoneHeight, requiredMonkeys);
 
-                zones.set(new_zone.id, new_zone);
-                zones_created += 1;
+                zones.set(newZone.id, newZone);
+                zonesCreated += 1;
             }
         }
     }
 
-    addNewPlayer(id) {
-        const new_player = new Player(id, this.spawnX, this.spawnY);
-        this.players.set(id, new_player);
+    getBlock(blockX, blockY) {
+        return this.terrain[blockY][blockX];
     }
 
-    getPlayer(id) {
-        return this.players.get(id);
+    setBlock(blockX, blockY, blockType) {
+        this.terrain[blockY][blockX] = blockType;
     }
 
-    movePlayer(id, x, y, direction) {
-        const player = players.get(id);
-
-        if (player) {
-            player.updatePosition(x, y, direction);
-
-            const player_block_x = Math.floor(player.x / GRID_SIZE);
-            const player_block_y = Math.floor(player.y / GRID_SIZE);
-            const zone_key = Zone.isInZone(player_block_x, player_block_y);
-
-            if (zone_key && player.inventory.length > 0) {
-                const zone = zones.get(zone_key);
+    isMineableBlock(blockX, blockY) {
+        if (blockX >= 0 && blockX < WORLD_SIZE 
+            && blockY >= 0 && blockY < WORLD_SIZE 
+            && MINEABLE_BLOCKS.contains(terrain[blockY][blockX])) {
                 
-                if (zone && !zone.completed) {
-                    const zone_is_completed = zone.addMonkey(id);
-                    if (zone_is_completed) {
-                        zone.currentMonkeys.forEach(player_id => {
-                            const zone_player = players.get(player_id);
-                            if (zone_player) {
-                                zone_player.updateScore(GAME_RULES.ZONE_COMPLETION_BASE_SCORE * zone.currentMonkeys.size);
-                                zone_player.removeFromInventory(BANANA)
-                            }
-                        })
-                    }
-                }
             }
+    }
+
+    getZone(key) {
+        return this.zones.get(key);
+    }
+
+    addNewPlayer(playerId) {
+        const newPlayer = new Player(playerId, this.spawnX, this.spawnY);
+        this.players.set(playerId, newPlayer);
+        return newPlayer;
+    }
+
+    getPlayer(playerId) {
+        return this.players.get(playerId);
+    }
+
+    removePlayer(playerId) {
+        this.players.delete(playerId);
+    }
+
+    addNewMessage(playerId, content) {
+        const newMessage = new Message(playerId, content);
+        this.messages.set(playerId, newMessage);
+        return newMessage;
+    }
+
+    addNewLetter(playerId, content, blockX, blockY) {
+        if (this.getBlock(blockX, blockY) === BLOCK_TYPE.EMPTY) {
+            const newLetter = new Letter(playerId, content, blockX, blockY);
+            this.letters.set(newLetter.key, newLetter);
+            this.setBlock(blockX, blockY, BLOCK_TYPE.EMPTY_WITH_ENVELOPE);
+            return newLetter
         }
+        return null;
+    }
+
+    getLetter(blockX, blockY) {
+        const letterKey = `${blockX},${blockY}`;
+        return letters.get(letterKey);
     }
 
      /**
